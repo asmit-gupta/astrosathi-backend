@@ -12,7 +12,7 @@ import { prisma } from '../src/lib/prisma';
 beforeEach(async () => {
   clock.set(null);
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE refresh_tokens, auth_sessions, consents, otp_requests, users RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE data_requests, user_preferences, birth_profiles, refresh_tokens, auth_sessions, consents, otp_requests, users RESTART IDENTITY CASCADE',
   );
 });
 

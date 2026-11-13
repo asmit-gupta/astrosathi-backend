@@ -54,6 +54,29 @@ tests/
 | POST | `/logout` | – | Bearer token |
 | GET | `/session` | – | Bearer token. Signed-in user, phone masked |
 
+## Public reference data (`/v1`, no sign-in)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/categories` | The 9 topic categories, Hindi and English names |
+| GET | `/places?q=luck&limit=10` | Birth-place search (India). English prefix, or Devanagari against a Hindi alias. Returns lat/lng and IANA timezone |
+
+## Signed-in user (`/v1/me`, Bearer token)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET / PATCH | `/` | Profile: `name`, `language`. Includes `deletion.dueAt` while a deletion is pending |
+| GET / POST | `/birth-profiles` | One `isSelf` profile, up to 10 total. Every profile must be 18+ (Indian date). `placeId` from `/places` fills place, lat/lng and timezone. `tobAccuracy: exact` needs `tob` (HH:MM); the other values (morning…night, unknown) need `tob: null` |
+| GET / PATCH / DELETE | `/birth-profiles/:id` | Edits are blocked during an active consult (once sessions exist) |
+| GET / PUT / PATCH / DELETE | `/preferences` | PUT saves onboarding answers and needs `consent: true`; `topics` are category slugs (max 3). PATCH toggles `showEveryone` |
+| GET | `/consents` | Consent history |
+| PUT | `/consents/marketing` | `{ granted }`: opt in or withdraw |
+| POST | `/data-export` | Records a DPDP access request (fulfilment: compliance module) |
+| POST / DELETE | `/deletion` | Request deletion (7-day cool-off) or cancel it |
+
+Reference data is seeded with `npm run db:seed` (insert-only, safe to re-run on production).
+Place data © GeoNames (https://www.geonames.org), CC BY 4.0; rebuild with `scripts/build-places.mjs`.
+
 Access tokens last 15 minutes; refresh tokens 60 days. Every request checks that the session is still live.
 
 Errors always look like `{ "error": { "code", "message", "details?" }, "requestId" }`.

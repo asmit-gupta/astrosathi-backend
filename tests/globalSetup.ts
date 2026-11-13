@@ -2,7 +2,9 @@ import { execSync } from 'node:child_process';
 import { rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import path from 'node:path';
+import { PrismaClient } from '@prisma/client';
 import EmbeddedPostgres from 'embedded-postgres';
+import { seed } from '../prisma/seed';
 
 /**
  * Starts a throwaway Postgres for the test run (no Docker needed) and applies
@@ -43,6 +45,11 @@ export default async function setup() {
   process.env.DATABASE_URL = url;
   process.env.DIRECT_URL = url;
   execSync('npx prisma migrate deploy', { env: { ...process.env, DATABASE_URL: url, DIRECT_URL: url }, stdio: 'pipe' });
+
+  // Reference data (categories, places) once per run; tests only truncate user tables.
+  const prisma = new PrismaClient({ datasources: { db: { url } } });
+  await seed(prisma);
+  await prisma.$disconnect();
 
   return async () => {
     await pg?.stop();

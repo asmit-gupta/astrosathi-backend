@@ -6,6 +6,8 @@ import { prisma } from './lib/prisma';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestId } from './middleware/requestId';
 import { authRouter } from './modules/auth/auth.routes';
+import { catalogRouter } from './modules/catalog/catalog.routes';
+import { meRouter } from './modules/users/users.routes';
 
 export function createApp() {
   const app = express();
@@ -39,6 +41,8 @@ export function createApp() {
   });
 
   app.use('/v1/auth', authRouter);
+  app.use('/v1/me', meRouter);
+  app.use('/v1', catalogRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -43,6 +43,55 @@ enum OtpDelivery {
   failed
 }
 
+enum Gender {
+  female
+  male
+  other
+  undisclosed
+}
+
+// "I don't know my exact time" asks for a rough window instead (spec §8.4).
+enum BirthTimeAccuracy {
+  exact
+  morning
+  afternoon
+  evening
+  night
+  unknown
+}
+
+enum BudgetBand {
+  under_20
+  from_20_to_50
+  from_50_to_100
+  above_100
+  no_preference
+}
+
+enum GenderPreference {
+  woman
+  man
+  no_preference
+}
+
+enum ConsultExperience {
+  many
+  few
+  never
+}
+
+enum DataRequestType {
+  export
+  erasure
+}
+
+enum DataRequestStatus {
+  received
+  in_progress
+  completed
+  cancelled
+}
+
 model User {
   id            String     @id @default(uuid()) @db.Uuid
   // HMAC of the normalised mobile number: used for lookup and uniqueness.
@@ -59,10 +108,118 @@ model User {
   createdAt     DateTime   @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  consents     Consent[]
-  authSessions AuthSession[]
+  consents      Consent[]
+  authSessions  AuthSession[]
+  birthProfiles BirthProfile[]
+  preferences   UserPreference?
+  dataRequests  DataRequest[]
 
   @@map("users")
+}
+
+// Topic categories (spec §7.10). Data, not code: Admin edits them later.
+model Category {
+  id            String   @id @default(uuid()) @db.Uuid
+  slug          String   @unique
+  nameEn        String   @map("name_en")
+  nameHi        String   @map("name_hi")
+  descriptionEn String?  @map("description_en")
+  descriptionHi String?  @map("description_hi")
+  sortOrder     Int      @map("sort_order")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("categories")
+}
+
+// Indian cities and towns from GeoNames (CC BY 4.0). Reference data, seeded.
+model Place {
+  id         Int     @id // GeoNames id
+  name       String
+  asciiName  String  @map("ascii_name")
+  // A Devanagari alias from GeoNames, used for search only (not always the common name).
+  aliasHi    String? @map("alias_hi")
+  state      String
+  // Lower-cased ascii name for prefix search.
+  searchName String  @map("search_name")
+  lat        Decimal @db.Decimal(8, 5)
+  lng        Decimal @db.Decimal(8, 5)
+  tzId       String  @map("tz_id")
+  population Int
+
+  @@index([searchName])
+  @@map("places")
+}
+
+// Spec §8.4. Birth details are personal data: only the owner and the astrologer
+// they consult may see them.
+model BirthProfile {
+  id            String            @id @default(uuid()) @db.Uuid
+  userId        String            @map("user_id") @db.Uuid
+  isSelf        Boolean           @map("is_self")
+  label         String
+  name          String
+  gender        Gender
+  dob           DateTime          @db.Date
+  // Local clock time at the birth place, "HH:MM". Null when not known exactly.
+  tob           String?
+  tobAccuracy   BirthTimeAccuracy @map("tob_accuracy")
+  placeId       Int?              @map("place_id")
+  placeText     String            @map("place_text")
+  lat           Decimal           @db.Decimal(8, 5)
+  lng           Decimal           @db.Decimal(8, 5)
+  // IANA zone; historical offsets come from the tz database at chart time.
+  tzId          String            @map("tz_id")
+  maritalStatus String?           @map("marital_status")
+  occupation    String?
+  createdAt     DateTime          @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("birth_profiles")
+}
+
+// Answers to the skippable onboarding questions (spec §8.2.1). Sensitive:
+// used only for ordering results, never shared with astrologers or used for marketing.
+model UserPreference {
+  userId         String             @id @map("user_id") @db.Uuid
+  topics         String[] // category slugs, max 3
+  languages      String[] // hi | en | hinglish, max 2
+  modes          String[] // chat | voice | video | live
+  budgetBand     BudgetBand?        @map("budget_band")
+  genderPref     GenderPreference?  @map("gender_pref")
+  firstTime      ConsultExperience? @map("first_time")
+  showEveryone   Boolean            @default(false) @map("show_everyone")
+  answeredAt     DateTime?          @map("answered_at")
+  skippedAt      DateTime?          @map("skipped_at")
+  source         String // device_sync | account
+  consentVersion String             @map("consent_version")
+  updatedAt      DateTime           @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("user_preferences")
+}
+
+// DPDP rights requests. Fulfilment (export file, erasure job) belongs to the compliance module.
+model DataRequest {
+  id          String            @id @default(uuid()) @db.Uuid
+  userId      String            @map("user_id") @db.Uuid
+  type        DataRequestType
+  status      DataRequestStatus @default(received)
+  // Erasure: when the cool-off ends and the job may run. Export: response deadline.
+  dueAt       DateTime          @map("due_at")
+  createdAt   DateTime          @map("created_at")
+  completedAt DateTime?         @map("completed_at")
+  cancelledAt DateTime?         @map("cancelled_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, type, status])
+  @@map("data_requests")
 }
 
 model Consent {
