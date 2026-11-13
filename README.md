@@ -74,6 +74,40 @@ tests/
 | POST | `/data-export` | Records a DPDP access request (fulfilment: compliance module) |
 | POST / DELETE | `/deletion` | Request deletion (7-day cool-off) or cancel it |
 
+## Admin (`/admin/v1`, single admin)
+
+There is exactly one admin account; the database refuses a second. Create it on a machine with `DATABASE_URL`:
+
+```bash
+npm run admin -- create --email you@example.com   # hidden password prompt, then enrol an authenticator app
+npm run admin -- reset-2fa                          # lost phone: new authenticator, all sessions ended
+npm run admin -- reset-password                     # forgot password: all sessions ended
+```
+
+Sign-in is email + password + 6-digit authenticator code. Sessions end after 30 idle minutes or 12 hours; a new
+login ends the previous session; 5 failed logins from one IP lock that IP for 15 minutes.
+
+With one admin there is no second approver. Sensitive actions instead need an authenticator code entered within
+the last 5 minutes (`POST /auth/step-up`), and every action is written to the audit log. The audit log is
+append-only: a database trigger rejects UPDATE and DELETE.
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/auth/login` | `email`, `password`, `code` → `token` (send as Bearer) |
+| GET | `/auth/session` | Who is signed in, whether step-up is active |
+| POST | `/auth/step-up` | `code` → sensitive actions allowed for 5 minutes |
+| POST | `/auth/password` | Step-up. `currentPassword`, `newPassword` (12+ chars) |
+| POST | `/auth/logout` | |
+| GET | `/settings` | Every business number: value in force, version, scheduled changes |
+| GET | `/settings/:key/history` | All versions |
+| PUT | `/settings/:key` | Step-up. `value`, `reason`, optional future `effectiveFrom`. Adds a version; never edits one |
+| POST | `/settings/:key/versions/:v/cancel` | Step-up. Cancels a version that hasn't taken effect |
+| GET | `/audit-logs` | Filters: `action`, `entityType`, `entityId`, `from`, `to`; `cursor`, `limit` |
+
+Settings and their defaults are defined in `src/modules/settings/registry.ts` (money in paise). Read them in code
+with `settings.get('platform_share_pct')`. Anything long-lived (a session, a pack) must snapshot the values it uses
+when it starts, so a change never alters work in progress.
+
 Reference data is seeded with `npm run db:seed` (insert-only, safe to re-run on production).
 Place data © GeoNames (https://www.geonames.org), CC BY 4.0; rebuild with `scripts/build-places.mjs`.
 

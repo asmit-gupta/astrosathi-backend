@@ -22,6 +22,17 @@ const schema = z
     PRIVACY_VERSION: z.string().min(1).default('v1'),
 
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
+
+    // Optional comma-separated IPs allowed to reach /admin. Empty = any IP (login still needs password + TOTP).
+    ADMIN_IP_ALLOWLIST: z
+      .string()
+      .default('')
+      .transform((v) =>
+        v
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      ),
   })
   .superRefine((env, ctx) => {
     if (env.SMS_PROVIDER === 'fast2sms' && (!env.FAST2SMS_API_KEY || !env.FAST2SMS_OTP_TEMPLATE_ID)) {

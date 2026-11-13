@@ -5,6 +5,7 @@ import { logger } from './lib/logger';
 import { prisma } from './lib/prisma';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestId } from './middleware/requestId';
+import { adminRouter } from './modules/admin/admin.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import { catalogRouter } from './modules/catalog/catalog.routes';
 import { meRouter } from './modules/users/users.routes';
@@ -43,6 +44,7 @@ export function createApp() {
   app.use('/v1/auth', authRouter);
   app.use('/v1/me', meRouter);
   app.use('/v1', catalogRouter);
+  app.use('/admin/v1', adminRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -204,6 +204,95 @@ model UserPreference {
   @@map("user_preferences")
 }
 
+// ---------- Admin (exactly one admin account) ----------
+
+model Admin {
+  id            String    @id @default(uuid()) @db.Uuid
+  // Always true and unique: the database itself allows only one admin row.
+  singleton     Boolean   @unique @default(true)
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  // TOTP secret, encrypted with the PII key.
+  totpSecretEnc String    @map("totp_secret_enc")
+  // Last accepted TOTP time-step, so a code can't be replayed.
+  lastTotpStep  BigInt    @default(0) @map("last_totp_step")
+  createdAt     DateTime  @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  passwordAt    DateTime  @map("password_at")
+
+  sessions AdminSession[]
+
+  @@map("admins")
+}
+
+model AdminSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  adminId    String    @map("admin_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  ip         String?
+  userAgent  String?   @map("user_agent")
+  createdAt  DateTime  @map("created_at")
+  lastUsedAt DateTime  @map("last_used_at")
+  // Set when a fresh TOTP code was entered; sensitive actions need this to be recent.
+  stepUpAt   DateTime? @map("step_up_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  admin Admin @relation(fields: [adminId], references: [id])
+
+  @@index([adminId, revokedAt])
+  @@map("admin_sessions")
+}
+
+model AdminLoginAttempt {
+  id        String   @id @default(uuid()) @db.Uuid
+  ip        String
+  success   Boolean
+  createdAt DateTime @map("created_at")
+
+  @@index([ip, createdAt])
+  @@map("admin_login_attempts")
+}
+
+// Append-only: a database trigger rejects UPDATE and DELETE (see the migration).
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorType  String   @map("actor_type") // admin | system | user
+  actorId    String?  @map("actor_id")
+  action     String // e.g. admin.login, setting.scheduled
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  before     Json?
+  after      Json?
+  reason     String?
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @map("created_at")
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+// Versioned business numbers (Admin → Settings, board Y13). The value in force is the
+// latest version whose effectiveFrom has passed. Versions are never edited; a scheduled
+// version can be cancelled before it takes effect.
+model Setting {
+  id            String    @id @default(uuid()) @db.Uuid
+  key           String
+  version       Int
+  value         Json
+  effectiveFrom DateTime  @map("effective_from")
+  reason        String
+  createdBy     String    @map("created_by") // admin id, or "system" for defaults
+  createdAt     DateTime  @map("created_at")
+  cancelledAt   DateTime? @map("cancelled_at")
+
+  @@unique([key, version])
+  @@index([key, effectiveFrom])
+  @@map("settings")
+}
+
 // DPDP rights requests. Fulfilment (export file, erasure job) belongs to the compliance module.
 model DataRequest {
   id          String            @id @default(uuid()) @db.Uuid
