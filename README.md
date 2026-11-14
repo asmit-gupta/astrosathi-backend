@@ -13,7 +13,8 @@ npm run db:deploy               # apply migrations
 npm run dev                     # http://localhost:4000
 ```
 
-With `SMS_PROVIDER=console`, OTP codes are printed in the server log.
+With `SMS_PROVIDER=console`, OTP codes are printed in the server log. Production uses `SMS_PROVIDER=apitxt`
+(`APITXT_API_KEY`, optional `APITXT_TEMPLATE_ID`); `fast2sms` remains available as an alternative.
 
 ## Production database (Neon)
 

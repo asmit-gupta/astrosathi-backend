@@ -14,7 +14,10 @@ const schema = z
       .string()
       .refine((v) => Buffer.from(v, 'base64').length === 32, 'must be 32 bytes, base64-encoded'),
 
-    SMS_PROVIDER: z.enum(['console', 'fast2sms']).default('console'),
+    SMS_PROVIDER: z.enum(['console', 'apitxt', 'fast2sms']).default('console'),
+    APITXT_API_KEY: z.string().optional(),
+    // Optional: SMS template id from the apitxt dashboard. Empty = account default template.
+    APITXT_TEMPLATE_ID: z.string().optional(),
     FAST2SMS_API_KEY: z.string().optional(),
     FAST2SMS_OTP_TEMPLATE_ID: z.string().optional(),
 
@@ -35,6 +38,9 @@ const schema = z
       ),
   })
   .superRefine((env, ctx) => {
+    if (env.SMS_PROVIDER === 'apitxt' && !env.APITXT_API_KEY) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'APITXT_API_KEY is required when SMS_PROVIDER=apitxt' });
+    }
     if (env.SMS_PROVIDER === 'fast2sms' && (!env.FAST2SMS_API_KEY || !env.FAST2SMS_OTP_TEMPLATE_ID)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
