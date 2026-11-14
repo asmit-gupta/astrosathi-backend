@@ -1,0 +1,517 @@
+{
+  "name": "AstroLive colour tokens",
+  "direction": "Ink + Kesar",
+  "version": "1.1",
+  "date": "2026-11-13",
+  "note": "Source of truth for colour. Values are hex. Light is the default; dark redefines the same names. Contrast was computed from these values (WCAG 2.x relative luminance); every listed pair passes in both themes.",
+  "light": {
+    "bg": {
+      "value": "#FFFFFF",
+      "use": "Page background"
+    },
+    "surface": {
+      "value": "#F5F5F3",
+      "use": "Cards, list rows, inputs"
+    },
+    "line": {
+      "value": "#E4E4E0",
+      "use": "Dividers. Decorative only, never the only edge of a control"
+    },
+    "border": {
+      "value": "#80807A",
+      "use": "Edges of inputs, outlined buttons, chips (needs 3:1)"
+    },
+    "ink": {
+      "value": "#1B1B1A",
+      "use": "Text"
+    },
+    "muted": {
+      "value": "#5B5B57",
+      "use": "Secondary text"
+    },
+    "primary": {
+      "value": "#1B1B1A",
+      "use": "Filled main button. Always carries the amount when it spends money"
+    },
+    "primary-pressed": {
+      "value": "#3A3A37",
+      "use": "Pressed state of the main button"
+    },
+    "on-primary": {
+      "value": "#FFFFFF",
+      "use": "Text on the main button"
+    },
+    "accent": {
+      "value": "#B5470A",
+      "use": "Saffron: highlights, selected chips, ratings, the money meter, links. One accent per screen area"
+    },
+    "accent-tint": {
+      "value": "#FBE9DC",
+      "use": "Background for selected chips and gentle notices"
+    },
+    "accent-bright": {
+      "value": "#F28C45",
+      "use": "Accent when sitting on ink (banners, dark surfaces). Fill only, with ink text"
+    },
+    "on-accent-bright": {
+      "value": "#1B1B1A",
+      "use": "Text on accent-bright"
+    },
+    "banner": {
+      "value": "#1B1B1A",
+      "use": "Promotional banner background (puja, packs)"
+    },
+    "on-banner": {
+      "value": "#FFFFFF",
+      "use": "Text on the banner"
+    },
+    "success": {
+      "value": "#1E7A4A",
+      "use": "Completed, payment done. Always with a tick and words"
+    },
+    "success-tint": {
+      "value": "#E3F3EA",
+      "use": "Background for success notes"
+    },
+    "error": {
+      "value": "#B3361F",
+      "use": "Failed payment, form errors. A brick, not bright red"
+    },
+    "error-tint": {
+      "value": "#FBE7E2",
+      "use": "Background for error notes"
+    },
+    "live": {
+      "value": "#B42318",
+      "use": "LIVE badge only"
+    },
+    "on-live": {
+      "value": "#FFFFFF",
+      "use": "Text on the LIVE badge"
+    },
+    "info": {
+      "value": "#1F4E8C",
+      "use": "Help, helplines, safety notes"
+    },
+    "info-tint": {
+      "value": "#E4EDF9",
+      "use": "Background for info notes"
+    },
+    "star-filled": {
+      "value": "#B5470A",
+      "use": "Filled rating stars (same as accent)"
+    },
+    "star-empty": {
+      "value": "#80807A",
+      "use": "Empty rating stars (same as border)"
+    }
+  },
+  "dark": {
+    "bg": {
+      "value": "#121211"
+    },
+    "surface": {
+      "value": "#1C1C1B"
+    },
+    "line": {
+      "value": "#2E2E2C"
+    },
+    "border": {
+      "value": "#7C7C76"
+    },
+    "ink": {
+      "value": "#F2F2EE"
+    },
+    "muted": {
+      "value": "#A9A9A3"
+    },
+    "primary": {
+      "value": "#F2F2EE"
+    },
+    "primary-pressed": {
+      "value": "#D4D4CF"
+    },
+    "on-primary": {
+      "value": "#121211"
+    },
+    "accent": {
+      "value": "#F28C45"
+    },
+    "accent-tint": {
+      "value": "#3A2314"
+    },
+    "accent-bright": {
+      "value": "#F28C45"
+    },
+    "on-accent-bright": {
+      "value": "#121211"
+    },
+    "banner": {
+      "value": "#2A2A28"
+    },
+    "on-banner": {
+      "value": "#F2F2EE"
+    },
+    "success": {
+      "value": "#5FCB8F"
+    },
+    "success-tint": {
+      "value": "#14301F"
+    },
+    "error": {
+      "value": "#F08A78"
+    },
+    "error-tint": {
+      "value": "#3A1B16"
+    },
+    "live": {
+      "value": "#FF6B5E"
+    },
+    "on-live": {
+      "value": "#121211"
+    },
+    "info": {
+      "value": "#8DB4F2"
+    },
+    "info-tint": {
+      "value": "#16263F"
+    },
+    "star-filled": {
+      "value": "#F28C45"
+    },
+    "star-empty": {
+      "value": "#7C7C76"
+    }
+  },
+  "contrast": {
+    "light": [
+      {
+        "pair": "ink on bg",
+        "use": "Body text",
+        "ratio": 17.24,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "ink on surface",
+        "use": "Text on cards",
+        "ratio": 15.79,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "muted on bg",
+        "use": "Secondary text",
+        "ratio": 6.82,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "muted on surface",
+        "use": "Secondary text on cards",
+        "ratio": 6.25,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "on-primary on primary",
+        "use": "Main button text",
+        "ratio": 17.24,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "on-primary on primary-pressed",
+        "use": "Pressed button text",
+        "ratio": 11.41,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "accent on bg",
+        "use": "Accent as text or link",
+        "ratio": 5.43,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "accent on accent-tint",
+        "use": "Accent on selected chip",
+        "ratio": 4.6,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "on-accent-bright on accent-bright",
+        "use": "Pill on banner",
+        "ratio": 7.07,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "accent-bright on banner",
+        "use": "Accent fill against banner",
+        "ratio": 7.07,
+        "needs": 3.0,
+        "pass": true
+      },
+      {
+        "pair": "on-banner on banner",
+        "use": "Banner text",
+        "ratio": 17.24,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "success on bg",
+        "use": "Success text",
+        "ratio": 5.33,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "success on success-tint",
+        "use": "Success on tint",
+        "ratio": 4.64,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "error on bg",
+        "use": "Error text",
+        "ratio": 6.06,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "error on error-tint",
+        "use": "Error on tint",
+        "ratio": 5.09,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "on-live on live",
+        "use": "LIVE badge",
+        "ratio": 6.57,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "info on info-tint",
+        "use": "Info on tint",
+        "ratio": 7.04,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "info on bg",
+        "use": "Info text",
+        "ratio": 8.31,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "border on bg",
+        "use": "Input edge on page",
+        "ratio": 3.97,
+        "needs": 3.0,
+        "pass": true
+      },
+      {
+        "pair": "border on surface",
+        "use": "Input edge on card",
+        "ratio": 3.64,
+        "needs": 3.0,
+        "pass": true
+      }
+    ],
+    "dark": [
+      {
+        "pair": "ink on bg",
+        "use": "Body text",
+        "ratio": 16.7,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "ink on surface",
+        "use": "Text on cards",
+        "ratio": 15.2,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "muted on bg",
+        "use": "Secondary text",
+        "ratio": 7.94,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "muted on surface",
+        "use": "Secondary text on cards",
+        "ratio": 7.22,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "on-primary on primary",
+        "use": "Main button text",
+        "ratio": 16.7,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "on-primary on primary-pressed",
+        "use": "Pressed button text",
+        "ratio": 12.6,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "accent on bg",
+        "use": "Accent as text or link",
+        "ratio": 7.69,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "accent on accent-tint",
+        "use": "Accent on selected chip",
+        "ratio": 6.02,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "on-accent-bright on accent-bright",
+        "use": "Pill on banner",
+        "ratio": 7.69,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "accent-bright on banner",
+        "use": "Accent fill against banner",
+        "ratio": 5.9,
+        "needs": 3.0,
+        "pass": true
+      },
+      {
+        "pair": "on-banner on banner",
+        "use": "Banner text",
+        "ratio": 12.81,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "success on bg",
+        "use": "Success text",
+        "ratio": 9.31,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "success on success-tint",
+        "use": "Success on tint",
+        "ratio": 7.08,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "error on bg",
+        "use": "Error text",
+        "ratio": 7.69,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "error on error-tint",
+        "use": "Error on tint",
+        "ratio": 6.39,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "on-live on live",
+        "use": "LIVE badge",
+        "ratio": 6.71,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "info on info-tint",
+        "use": "Info on tint",
+        "ratio": 7.19,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "info on bg",
+        "use": "Info text",
+        "ratio": 8.88,
+        "needs": 4.5,
+        "pass": true
+      },
+      {
+        "pair": "border on bg",
+        "use": "Input edge on page",
+        "ratio": 4.46,
+        "needs": 3.0,
+        "pass": true
+      },
+      {
+        "pair": "border on surface",
+        "use": "Input edge on card",
+        "ratio": 4.06,
+        "needs": 3.0,
+        "pass": true
+      }
+    ]
+  },
+  "rules": [
+    "Primary (ink) is the only filled button colour. Any button that spends money shows the amount, for example 'Pay ₹905' or 'Chat ₹30/min'.",
+    "Free actions and secondary actions are outlined (border colour, ink text).",
+    "One accent (saffron) per screen area: selected chip, money meter, rating stars, links, banner pill. It is never a button fill on a white page.",
+    "Turmeric yellow and violet are not used anywhere. They belong to competitors in this category.",
+    "Colour is never the only signal. Success, error, LIVE and selected states also carry a tick, icon or words.",
+    "Error uses the brick red with words and an icon. True red (live) is used for the LIVE badge only.",
+    "Helpline and safety notes use info blue, never red.",
+    "Verified ticks are ink, not blue or green.",
+    "No gradients. Flat colour only.",
+    "Do not use accent as small text on a coloured background other than white, accent-tint or ink. Check any new pair in both themes before shipping.",
+    "Dark mode is checked on its own. Passing in light does not carry over.",
+    "Filled rating stars use saffron, empty stars use the border grey. Stars are the trust signal on every astrologer row."
+  ],
+  "typography": {
+    "family": "Noto Sans (Latin) + Noto Sans Devanagari (Hindi)",
+    "weights": [
+      400,
+      600,
+      700
+    ],
+    "why": "One designed family across both scripts, covers the ₹ sign, and is the Android system font family so it needs no download on low-end phones.",
+    "check_before_locking": "Hindi and English side by side at 14px and 16px on a cheap Android phone; ₹ sign and tabular numerals in prices and the money meter.",
+    "use": {
+      "price and meter": "600 or 700, tabular numerals",
+      "body": "400, 14–16px",
+      "headings": "700"
+    }
+  },
+  "logo": {
+    "wordmark": "Ink (#1B1B1A) on light, white on dark",
+    "mark": "Saffron (#B5470A on light, #F28C45 on ink). One small mark, not a gradient.",
+    "app_icon": "Ink square with the saffron mark. Stands out in a store grid of yellow and purple icons.",
+    "must_work_in": [
+      "one colour ink on white",
+      "one colour white on ink",
+      "one colour saffron on white (stamp, WhatsApp share)"
+    ],
+    "avoid": [
+      "yellow",
+      "violet",
+      "gold gradients",
+      "stars and moons as the symbol (the category cliché)"
+    ]
+  }
+}

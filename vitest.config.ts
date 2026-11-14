@@ -16,6 +16,7 @@ export default defineConfig({
       HASH_PEPPER: 'test-pepper-test-pepper-test-pepper-000000',
       PII_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
       SMS_PROVIDER: 'console',
+      CORS_ORIGINS: 'http://localhost:5173',
       TERMS_VERSION: 'v1',
       PRIVACY_VERSION: 'v1',
     },

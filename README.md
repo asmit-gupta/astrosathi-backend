@@ -22,6 +22,7 @@ With `SMS_PROVIDER=console`, OTP codes are printed in the server log. Production
 - Deploy migrations with `npm run db:deploy`. Never `prisma migrate dev` or `db push` against production.
 - `GET /health/ready` returns 200 only when the database is reachable and migrated.
 - Tests refuse to run against any non-local database host.
+- Browser clients (Flutter web) need their exact origin in `CORS_ORIGINS` (comma-separated). Mobile apps don't need CORS.
 
 ## Tests
 

@@ -24,6 +24,17 @@ const schema = z
     TERMS_VERSION: z.string().min(1).default('v1'),
     PRIVACY_VERSION: z.string().min(1).default('v1'),
 
+    // Comma-separated exact browser origins allowed to call the API (e.g. http://localhost:5173). Empty = none.
+    CORS_ORIGINS: z
+      .string()
+      .default('')
+      .transform((v) =>
+        v
+          .split(',')
+          .map((s) => s.trim().replace(/\/$/, ''))
+          .filter(Boolean),
+      ),
+
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
 
     // Optional comma-separated IPs allowed to reach /admin. Empty = any IP (login still needs password + TOTP).
