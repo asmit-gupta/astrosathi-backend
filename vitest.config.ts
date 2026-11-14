@@ -17,6 +17,7 @@ export default defineConfig({
       PII_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
       SMS_PROVIDER: 'console',
       CORS_ORIGINS: 'http://localhost:5173',
+      ADMIN_PANEL_SECRET: 'test-admin-panel-secret-0123456789abcdef',
       TERMS_VERSION: 'v1',
       PRIVACY_VERSION: 'v1',
     },

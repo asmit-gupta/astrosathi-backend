@@ -2,7 +2,7 @@ import { Router, type Request } from 'express';
 import { z } from 'zod';
 import { badRequest } from '../../lib/errors';
 import { prisma } from '../../lib/prisma';
-import { adminIpAllowlist, requireAdmin, requireStepUp } from '../../middleware/adminAuth';
+import { adminClientIp, adminIpAllowlist, requireAdmin, requireStepUp } from '../../middleware/adminAuth';
 import { validateBody } from '../../middleware/validate';
 import * as audit from '../audit/audit.service';
 import * as settings from '../settings/settings.service';
@@ -11,7 +11,7 @@ import * as adminAuth from './adminAuth.service';
 export const adminRouter = Router();
 adminRouter.use(adminIpAllowlist);
 
-const meta = (req: Request) => ({ ip: req.ip ?? 'unknown', userAgent: req.header('user-agent') });
+const meta = (req: Request) => ({ ip: adminClientIp(req), userAgent: req.header('user-agent') });
 const code = z.string().regex(/^\d{6}$/, 'must be 6 digits');
 
 // ---- Auth ----

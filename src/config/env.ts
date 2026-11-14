@@ -35,6 +35,9 @@ const schema = z
           .filter(Boolean),
       ),
 
+    // Shared with the admin panel's server so it can pass the admin's real IP (min 32 chars). Optional.
+    ADMIN_PANEL_SECRET: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(32).optional()),
+
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
 
     // Optional comma-separated IPs allowed to reach /admin. Empty = any IP (login still needs password + TOTP).

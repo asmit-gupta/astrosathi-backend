@@ -291,3 +291,41 @@ describe('single admin', () => {
     expect(await prisma.admin.count()).toBe(1);
   });
 });
+
+describe('admin client IP from the panel', () => {
+  const SECRET = 'test-admin-panel-secret-0123456789abcdef';
+  const failedLoginIp = async (headers: Record<string, string>) => {
+    await setup();
+    await request(app).post('/admin/v1/auth/login').set(headers).send({ email: EMAIL, password: 'wrong-wrong-wrong', code: '123456' });
+    const row = await prisma.auditLog.findFirstOrThrow({ where: { action: 'admin.login_failed' } });
+    return row.ip;
+  };
+
+  it('uses the forwarded IP when the panel presents the shared secret', async () => {
+    expect(await failedLoginIp({ 'X-Admin-Panel-Secret': SECRET, 'X-Admin-Client-Ip': '203.0.113.9' })).toBe('203.0.113.9');
+  });
+
+  it('ignores the header without the secret', async () => {
+    expect(await failedLoginIp({ 'X-Admin-Client-Ip': '203.0.113.9' })).not.toBe('203.0.113.9');
+  });
+
+  it('ignores the header with a wrong secret', async () => {
+    expect(await failedLoginIp({ 'X-Admin-Panel-Secret': 'wrong', 'X-Admin-Client-Ip': '203.0.113.9' })).not.toBe('203.0.113.9');
+  });
+
+  it('ignores a forwarded value that is not an IP', async () => {
+    expect(await failedLoginIp({ 'X-Admin-Panel-Secret': SECRET, 'X-Admin-Client-Ip': 'not-an-ip' })).not.toBe('not-an-ip');
+  });
+
+  it('locks out by the real client IP, so one admin\'s typos do not lock the panel for everyone', async () => {
+    const t = await setup();
+    const from = (ip: string) => ({ 'X-Admin-Panel-Secret': SECRET, 'X-Admin-Client-Ip': ip });
+    for (let i = 0; i < 5; i++) {
+      await request(app).post('/admin/v1/auth/login').set(from('198.51.100.1')).send({ email: EMAIL, password: 'wrong-wrong-wrong', code: '123456' });
+    }
+    const locked = await request(app).post('/admin/v1/auth/login').set(from('198.51.100.1')).send({ email: EMAIL, password: PASSWORD, code: t.nextCode() });
+    expect(locked.body.error.code).toBe('ADMIN_LOGIN_LOCKED');
+    const other = await request(app).post('/admin/v1/auth/login').set(from('198.51.100.2')).send({ email: EMAIL, password: PASSWORD, code: t.nextCode() });
+    expect(other.status).toBe(200);
+  });
+});
