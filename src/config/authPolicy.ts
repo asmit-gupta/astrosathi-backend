@@ -6,7 +6,7 @@
 export const authPolicy = {
   otp: {
     length: 6,
-    ttlSeconds: 5 * 60, // handoff §3A rule 1: 5 minutes, not Fast2SMS's 15-minute default
+    ttlSeconds: 5 * 60, // handoff §3A rule 1: 5 minutes
     maxVerifyAttempts: 5, // per code; hitting it locks the number
     lockSeconds: 15 * 60, // spec §8.3: lock for 15 minutes after 5 wrong tries
     resendCooldownSeconds: 30,
