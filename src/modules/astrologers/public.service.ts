@@ -10,6 +10,11 @@ export interface ListQuery {
   mode?: ConsultMode;
   gender?: 'female' | 'male' | 'other';
   online?: boolean;
+  /** Only astrologers who host live shows (W2-3 "Live host"). */
+  live?: boolean;
+  /** Price range in paise per minute, checked against the cheapest mode (or the chosen mode). */
+  minRatePaise?: number;
+  maxRatePaise?: number;
   sort: 'recommended' | 'price_asc' | 'price_desc' | 'experience';
   limit: number;
   offset: number;
@@ -31,6 +36,7 @@ export async function list(q: ListQuery) {
     ...(q.language ? { languages: { has: q.language } } : {}),
     ...(q.gender ? { gender: q.gender } : {}),
     ...(q.mode ? { capabilities: { has: `consult_${q.mode}` } } : {}),
+    ...(q.live ? { AND: [{ capabilities: { has: 'host_live' } }] } : {}),
   };
   const rows = await prisma.astrologer.findMany({ where, include });
   const rates = await currentRatesMany(rows.map((r) => r.id));
@@ -45,6 +51,11 @@ export async function list(q: ListQuery) {
   if (q.online) cards = cards.filter((c) => c.status === 'online');
 
   const price = (c: (typeof cards)[number]) => (q.mode ? c.rates[q.mode] : c.fromRatePaise) ?? Number.MAX_SAFE_INTEGER;
+  // Live min and max for the price slider, before the price filter applies (W2-3 note 1).
+  const prices = cards.map(price).filter((p) => p !== Number.MAX_SAFE_INTEGER);
+  const priceRange = prices.length ? { minPaise: Math.min(...prices), maxPaise: Math.max(...prices) } : null;
+  if (q.minRatePaise !== undefined) cards = cards.filter((c) => price(c) >= q.minRatePaise!);
+  if (q.maxRatePaise !== undefined) cards = cards.filter((c) => price(c) <= q.maxRatePaise!);
   cards.sort((a, b) => {
     switch (q.sort) {
       case 'price_asc':
@@ -57,7 +68,7 @@ export async function list(q: ListQuery) {
         return (a.status === 'online' ? 0 : 1) - (b.status === 'online' ? 0 : 1) || (b.experienceYears ?? 0) - (a.experienceYears ?? 0);
     }
   });
-  return { items: cards.slice(q.offset, q.offset + q.limit), total: cards.length };
+  return { items: cards.slice(q.offset, q.offset + q.limit), total: cards.length, priceRange };
 }
 
 /** Profile page (spec §8.7): the card plus about, and a trust panel showing only what's true. */

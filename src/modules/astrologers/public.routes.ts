@@ -29,6 +29,12 @@ const listQuery = z.object({
     .enum(['true', 'false', '1', '0'])
     .transform((v) => v === 'true' || v === '1')
     .optional(),
+  live: z
+    .enum(['true', 'false', '1', '0'])
+    .transform((v) => v === 'true' || v === '1')
+    .optional(),
+  minRatePaise: z.coerce.number().int().min(0).optional(),
+  maxRatePaise: z.coerce.number().int().min(0).optional(),
   sort: z.enum(['recommended', 'price_asc', 'price_desc', 'experience']).default('recommended'),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   offset: z.coerce.number().int().min(0).default(0),

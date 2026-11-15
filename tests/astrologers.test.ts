@@ -372,6 +372,10 @@ describe('after approval', () => {
     expect((await request(app).get('/v1/astrologers?category=love-relationships')).body.total).toBe(0);
     expect((await request(app).get('/v1/astrologers?mode=video')).body.total).toBe(0);
     expect((await request(app).get('/v1/astrologers?online=1')).body.total).toBe(0);
+    expect(list.body.priceRange).toEqual({ minPaise: 3000, maxPaise: 3000 });
+    expect((await request(app).get('/v1/astrologers?maxRatePaise=2000')).body.total).toBe(0);
+    expect((await request(app).get('/v1/astrologers?minRatePaise=2000&maxRatePaise=3000')).body.total).toBe(1);
+    expect((await request(app).get('/v1/astrologers?live=1')).body.total).toBe(0);
 
     const profile = await request(app).get(`/v1/astrologers/${id}`);
     expect(profile.body.trust).toMatchObject({ identityVerified: true, passedReview: true });
