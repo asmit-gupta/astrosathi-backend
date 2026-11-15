@@ -90,8 +90,11 @@ Sign-in is email + password + 6-digit authenticator code. Sessions end after 30 
 login ends the previous session; 5 failed logins from one IP lock that IP for 15 minutes.
 
 With one admin there is no second approver. Sensitive actions instead need an authenticator code entered within
-the last 5 minutes (`POST /auth/step-up`), and every action is written to the audit log. The audit log is
-append-only: a database trigger rejects UPDATE and DELETE.
+the last 5 minutes (`POST /auth/step-up`).
+
+Audit log: recording is opt-in per action via `AUDIT_ACTIONS` (empty = nothing, `*` = everything, or a comma list such
+as `astrologer.approved,setting.scheduled`). It is off for now (founder's decision, 15 Nov 2026) and earlier entries
+were cleared. The table stays append-only: a database trigger rejects UPDATE and DELETE.
 
 | Method | Path | Notes |
 |---|---|---|

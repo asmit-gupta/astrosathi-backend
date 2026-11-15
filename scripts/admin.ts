@@ -66,6 +66,8 @@ async function enrolTotp(email: string): Promise<{ secretEnc: string; step: numb
 }
 
 async function audit(action: string, actorId: string) {
+  const list = (process.env.AUDIT_ACTIONS ?? '').split(',').map((x) => x.trim());
+  if (!list.includes('*') && !list.includes(action)) return;
   await prisma.auditLog.create({
     data: { actorType: 'system', actorId, action, reason: 'admin CLI', createdAt: new Date() },
   });

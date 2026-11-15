@@ -329,3 +329,22 @@ describe('admin client IP from the panel', () => {
     expect(other.status).toBe(200);
   });
 });
+
+describe('audit recording switch', () => {
+  it('records nothing for actions not listed in AUDIT_ACTIONS', async () => {
+    const { env } = await import('../src/config/env');
+    const audit = await import('../src/modules/audit/audit.service');
+    const saved = [...env.AUDIT_ACTIONS];
+    env.AUDIT_ACTIONS.splice(0, env.AUDIT_ACTIONS.length, 'astrologer.approved');
+    try {
+      await audit.record(prisma, { actorType: 'admin', action: 'setting.scheduled' });
+      await audit.record(prisma, { actorType: 'admin', action: 'astrologer.approved' });
+      expect((await prisma.auditLog.findMany()).map((a) => a.action)).toEqual(['astrologer.approved']);
+      env.AUDIT_ACTIONS.splice(0, env.AUDIT_ACTIONS.length);
+      await audit.record(prisma, { actorType: 'admin', action: 'astrologer.approved' });
+      expect(await prisma.auditLog.count()).toBe(1);
+    } finally {
+      env.AUDIT_ACTIONS.splice(0, env.AUDIT_ACTIONS.length, ...saved);
+    }
+  });
+});
