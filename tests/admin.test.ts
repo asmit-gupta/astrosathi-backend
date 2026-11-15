@@ -64,7 +64,7 @@ describe('admin login', () => {
     expect(session.body).toMatchObject({ admin: { email: EMAIL }, stepUpActive: true });
   });
 
-  it('gives one generic error for any wrong part, and audits it', async () => {
+  it('gives one generic error for any wrong part', async () => {
     const t = await setup();
     const wrongPassword = await request(app)
       .post('/admin/v1/auth/login')
