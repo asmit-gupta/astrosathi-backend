@@ -19,6 +19,19 @@ export const CATEGORIES = [
   { slug: 'general-guidance', nameEn: 'General Life Guidance', nameHi: 'सामान्य जीवन मार्गदर्शन' },
 ];
 
+// Spec §7.10: how astrologers work. Separate from topics; declared by the astrologer, confirmed in review.
+export const METHOD_TAGS = [
+  { slug: 'vedic', nameEn: 'Vedic', nameHi: 'वैदिक' },
+  { slug: 'kp', nameEn: 'KP', nameHi: 'केपी' },
+  { slug: 'nadi', nameEn: 'Nadi', nameHi: 'नाड़ी' },
+  { slug: 'lal-kitab', nameEn: 'Lal Kitab', nameHi: 'लाल किताब' },
+  { slug: 'tarot', nameEn: 'Tarot', nameHi: 'टैरो' },
+  { slug: 'numerology', nameEn: 'Numerology', nameHi: 'अंक ज्योतिष' },
+  { slug: 'vastu', nameEn: 'Vastu', nameHi: 'वास्तु' },
+  { slug: 'palmistry', nameEn: 'Palmistry', nameHi: 'हस्तरेखा' },
+  { slug: 'face-reading', nameEn: 'Face reading', nameHi: 'मुख पठन' },
+];
+
 function readPlaces() {
   const file = new URL('./seed-data/places-in.tsv', import.meta.url);
   const [, ...lines] = readFileSync(file, 'utf8').trimEnd().split('\n');
@@ -45,11 +58,16 @@ export async function seed(prisma: PrismaClient) {
     skipDuplicates: true,
   });
 
+  const methodTags = await prisma.methodTag.createMany({
+    data: METHOD_TAGS.map((t, i) => ({ ...t, sortOrder: i + 1 })),
+    skipDuplicates: true,
+  });
+
   const places = readPlaces();
   let placesAdded = 0;
   for (let i = 0; i < places.length; i += 1000) {
     const res = await prisma.place.createMany({ data: places.slice(i, i + 1000), skipDuplicates: true });
     placesAdded += res.count;
   }
-  return { categoriesAdded: categories.count, placesAdded, placesInFile: places.length };
+  return { categoriesAdded: categories.count, methodTagsAdded: methodTags.count, placesAdded, placesInFile: places.length };
 }

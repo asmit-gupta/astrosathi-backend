@@ -54,9 +54,9 @@ export async function login(body: VerifyOtpBody, meta: RequestMeta) {
 
     await recordConsents(tx, user.id, body.consents.marketing, meta.ip, now);
 
-    // One active session per account (spec §8.20): signing in signs other devices out.
+    // One active session per account per app (spec §8.20): signing in signs other devices out of that app.
     await tx.authSession.updateMany({
-      where: { userId: user.id, revokedAt: null },
+      where: { userId: user.id, app: body.app, revokedAt: null },
       data: { revokedAt: now, revokeReason: 'signed_in_elsewhere' },
     });
 
@@ -68,6 +68,7 @@ export async function login(body: VerifyOtpBody, meta: RequestMeta) {
         appVersion: body.appVersion,
         ip: meta.ip,
         userAgent: meta.userAgent?.slice(0, 256),
+        app: body.app,
         createdAt: now,
         lastUsedAt: now,
       },

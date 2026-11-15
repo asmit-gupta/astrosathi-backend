@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+/** `KEY=` with nothing after it means "not set". */
+const blankAsUnset = <T extends z.ZodTypeAny>(t: T) => z.preprocess((v) => (v === '' ? undefined : v), t);
+
 const schema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -36,7 +39,15 @@ const schema = z
       ),
 
     // Shared with the admin panel's server so it can pass the admin's real IP (min 32 chars). Optional.
-    ADMIN_PANEL_SECRET: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(32).optional()),
+    ADMIN_PANEL_SECRET: blankAsUnset(z.string().min(32).optional()),
+
+    // Object storage for photos, documents and intro videos (S3 or any S3-compatible service).
+    // Without these, upload endpoints answer 503 STORAGE_NOT_CONFIGURED.
+    STORAGE_BUCKET: blankAsUnset(z.string().optional()),
+    STORAGE_REGION: blankAsUnset(z.string().default('ap-south-1')),
+    STORAGE_ENDPOINT: blankAsUnset(z.string().url().optional()),
+    STORAGE_ACCESS_KEY_ID: blankAsUnset(z.string().optional()),
+    STORAGE_SECRET_ACCESS_KEY: blankAsUnset(z.string().optional()),
 
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
 

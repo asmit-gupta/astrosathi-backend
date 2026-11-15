@@ -4,6 +4,7 @@ import { badRequest } from '../../lib/errors';
 import { prisma } from '../../lib/prisma';
 import { adminClientIp, adminIpAllowlist, requireAdmin, requireStepUp } from '../../middleware/adminAuth';
 import { validateBody } from '../../middleware/validate';
+import { adminAstrologersRouter } from '../astrologers/admin.routes';
 import * as audit from '../audit/audit.service';
 import * as settings from '../settings/settings.service';
 import * as adminAuth from './adminAuth.service';
@@ -79,6 +80,10 @@ adminRouter.post('/settings/:key/versions/:version/cancel', requireStepUp, valid
   const row = await settings.cancel(String(req.params.key), version, req.body.reason, { adminId: req.admin!.adminId, ...meta(req) });
   res.json({ version: row });
 });
+
+// ---- Astrologers (board Y2) ----
+
+adminRouter.use(adminAstrologersRouter);
 
 // ---- Audit log (board Y15) ----
 

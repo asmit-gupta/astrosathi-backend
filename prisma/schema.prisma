@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Neon: pooled endpoint for the running app, direct endpoint for migrations
   // (migrate takes session-level advisory locks, which a transaction pooler can't hold).
   url       = env("DATABASE_URL")
@@ -31,6 +31,14 @@ enum ConsentDoc {
   privacy
   age_18
   marketing
+  provider_conduct // astrologer code of conduct, accepted at application submit
+  provider_terms // astrologer commercial terms (40% platform share, payouts, strikes)
+}
+
+// Which app a login session belongs to. Signing in to one app never signs the other out.
+enum AuthApp {
+  user
+  provider
 }
 
 enum OtpPurpose {
@@ -111,6 +119,8 @@ model User {
   consents      Consent[]
   authSessions  AuthSession[]
   birthProfiles BirthProfile[]
+  astrologer    Astrologer?
+  uploads       Upload[]
   preferences   UserPreference?
   dataRequests  DataRequest[]
 
@@ -147,6 +157,8 @@ model Place {
   lng        Decimal @db.Decimal(8, 5)
   tzId       String  @map("tz_id")
   population Int
+
+  astrologers Astrologer[]
 
   @@index([searchName])
   @@map("places")
@@ -207,18 +219,18 @@ model UserPreference {
 // ---------- Admin (exactly one admin account) ----------
 
 model Admin {
-  id            String    @id @default(uuid()) @db.Uuid
+  id            String   @id @default(uuid()) @db.Uuid
   // Always true and unique: the database itself allows only one admin row.
-  singleton     Boolean   @unique @default(true)
-  email         String    @unique
-  passwordHash  String    @map("password_hash")
+  singleton     Boolean  @unique @default(true)
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
   // TOTP secret, encrypted with the PII key.
-  totpSecretEnc String    @map("totp_secret_enc")
+  totpSecretEnc String   @map("totp_secret_enc")
   // Last accepted TOTP time-step, so a code can't be replayed.
-  lastTotpStep  BigInt    @default(0) @map("last_totp_step")
-  createdAt     DateTime  @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  passwordAt    DateTime  @map("password_at")
+  lastTotpStep  BigInt   @default(0) @map("last_totp_step")
+  createdAt     DateTime @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  passwordAt    DateTime @map("password_at")
 
   sessions AdminSession[]
 
@@ -364,6 +376,7 @@ model AuthSession {
   lastUsedAt   DateTime  @map("last_used_at")
   revokedAt    DateTime? @map("revoked_at")
   revokeReason String?   @map("revoke_reason")
+  app          AuthApp   @default(user)
 
   user          User           @relation(fields: [userId], references: [id])
   refreshTokens RefreshToken[]
@@ -385,4 +398,244 @@ model RefreshToken {
 
   @@index([sessionId])
   @@map("refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Astrologers (build step 3; boards X1, X2, X4, Y2; spec §7.10, §9, §11.3)
+// ---------------------------------------------------------------------------
+
+enum AstrologerStatus {
+  draft // filling the 5-step application
+  submitted // waiting for the admin
+  needs_changes // admin asked for specific fixes
+  interview_scheduled
+  approved // listed and can go online
+  rejected
+  suspended
+}
+
+enum ConsultMode {
+  chat
+  voice
+  video
+}
+
+enum IdType {
+  aadhaar
+  passport
+  driving_licence
+  voter_id
+}
+
+enum UploadPurpose {
+  photo
+  pan
+  id_front
+  id_back
+  experience_proof
+  intro_video
+}
+
+enum UploadStatus {
+  pending // upload link issued
+  uploaded // file confirmed in storage
+}
+
+enum DocReview {
+  pending
+  verified
+  rejected
+}
+
+enum RateStatus {
+  requested
+  approved
+  rejected
+  cancelled
+}
+
+enum RevisionStatus {
+  pending
+  approved
+  rejected
+}
+
+/// "How the astrologer works" (Vedic, KP, Tarot…). Separate from topic categories (spec §7.10).
+model MethodTag {
+  slug      String  @id
+  nameEn    String  @map("name_en")
+  nameHi    String  @map("name_hi")
+  sortOrder Int     @map("sort_order")
+  active    Boolean @default(true)
+
+  @@map("method_tags")
+}
+
+/// One per applicant or astrologer, linked to their user account (same phone login).
+model Astrologer {
+  id                    String           @id @default(uuid()) @db.Uuid
+  userId                String           @unique @map("user_id") @db.Uuid
+  status                AstrologerStatus @default(draft)
+  // Step 1: basics
+  legalName             String?          @map("legal_name")
+  displayName           String?          @map("display_name")
+  gender                Gender?
+  placeId               Int?             @map("place_id")
+  languages             String[]
+  experienceYears       Int?             @map("experience_years")
+  photoUploadId         String?          @map("photo_upload_id") @db.Uuid
+  // Step 2: speciality and what they want to offer
+  methods               String[]
+  primaryCategory       String?          @map("primary_category")
+  secondaryCategories   String[]         @map("secondary_categories")
+  capabilitiesRequested String[]         @map("capabilities_requested")
+  bio                   String?
+  // Step 3: documents
+  idType                IdType?          @map("id_type")
+  panUploadId           String?          @map("pan_upload_id") @db.Uuid
+  idFrontUploadId       String?          @map("id_front_upload_id") @db.Uuid
+  idBackUploadId        String?          @map("id_back_upload_id") @db.Uuid
+  proofUploadId         String?          @map("proof_upload_id") @db.Uuid
+  introVideoUploadId    String?          @map("intro_video_upload_id") @db.Uuid
+  // Decided by the admin
+  capabilities          String[]
+  listed                Boolean          @default(false)
+  interviewAt           DateTime?        @map("interview_at")
+  interviewLink         String?          @map("interview_link")
+  rejectReason          String?          @map("reject_reason")
+  reapplyAfter          DateTime?        @map("reapply_after")
+  suspendReason         String?          @map("suspend_reason")
+  submittedAt           DateTime?        @map("submitted_at")
+  approvedAt            DateTime?        @map("approved_at") // starts the new-astrologer rate cap
+  createdAt             DateTime         @map("created_at")
+  updatedAt             DateTime         @map("updated_at")
+
+  user         User                    @relation(fields: [userId], references: [id])
+  place        Place?                  @relation(fields: [placeId], references: [id])
+  kyc          AstrologerKyc?
+  availability AstrologerAvailability?
+  rates        AstrologerRate[]
+  events       AstrologerEvent[]
+  fixes        ApplicationFix[]
+  revisions    ProfileRevision[]
+
+  @@index([status, submittedAt])
+  @@index([listed, primaryCategory])
+  @@map("astrologers")
+}
+
+/// PAN and bank details, encrypted like phone numbers; last 4 digits kept for display.
+model AstrologerKyc {
+  astrologerId     String   @id @map("astrologer_id") @db.Uuid
+  panEnc           String   @map("pan_enc")
+  panLast4         String   @map("pan_last4")
+  bankAccountEnc   String   @map("bank_account_enc")
+  bankAccountLast4 String   @map("bank_account_last4")
+  ifsc             String
+  accountHolder    String?  @map("account_holder")
+  gstin            String?
+  updatedAt        DateTime @map("updated_at")
+
+  astrologer Astrologer @relation(fields: [astrologerId], references: [id])
+
+  @@map("astrologer_kyc")
+}
+
+/// Every rate ever asked for or set. The rate in force is the latest approved one whose effectiveFrom has passed.
+model AstrologerRate {
+  id            String      @id @default(uuid()) @db.Uuid
+  astrologerId  String      @map("astrologer_id") @db.Uuid
+  mode          ConsultMode
+  ratePaise     Int         @map("rate_paise")
+  status        RateStatus
+  effectiveFrom DateTime?   @map("effective_from")
+  note          String?
+  createdAt     DateTime    @map("created_at")
+  decidedAt     DateTime?   @map("decided_at")
+
+  astrologer Astrologer @relation(fields: [astrologerId], references: [id])
+
+  @@index([astrologerId, mode, status])
+  @@map("astrologer_rates")
+}
+
+/// The application timeline the astrologer sees (X1-4) and the admin reviews.
+model AstrologerEvent {
+  id           String   @id @default(uuid()) @db.Uuid
+  astrologerId String   @map("astrologer_id") @db.Uuid
+  type         String
+  note         String?
+  actor        String // astrologer | admin | system
+  createdAt    DateTime @map("created_at")
+
+  astrologer Astrologer @relation(fields: [astrologerId], references: [id])
+
+  @@index([astrologerId, createdAt])
+  @@map("astrologer_events")
+}
+
+/// "One thing to fix": specific, actionable requests from the admin (X1-4 note 2).
+model ApplicationFix {
+  id           String    @id @default(uuid()) @db.Uuid
+  astrologerId String    @map("astrologer_id") @db.Uuid
+  field        String
+  message      String
+  createdAt    DateTime  @map("created_at")
+  resolvedAt   DateTime? @map("resolved_at")
+
+  astrologer Astrologer @relation(fields: [astrologerId], references: [id])
+
+  @@index([astrologerId, resolvedAt])
+  @@map("application_fixes")
+}
+
+/// Profile edits after approval go to review; the live profile stays until approved (X4-2 note 4).
+model ProfileRevision {
+  id           String         @id @default(uuid()) @db.Uuid
+  astrologerId String         @map("astrologer_id") @db.Uuid
+  changes      Json
+  status       RevisionStatus @default(pending)
+  note         String?
+  createdAt    DateTime       @map("created_at")
+  decidedAt    DateTime?      @map("decided_at")
+
+  astrologer Astrologer @relation(fields: [astrologerId], references: [id])
+
+  @@index([status, createdAt])
+  @@map("profile_revisions")
+}
+
+/// Per-mode online switches (X2-1). A mode only counts if the admin granted it.
+model AstrologerAvailability {
+  astrologerId String    @id @map("astrologer_id") @db.Uuid
+  chat         Boolean   @default(false)
+  voice        Boolean   @default(false)
+  video        Boolean   @default(false)
+  awayUntil    DateTime? @map("away_until")
+  updatedAt    DateTime  @map("updated_at")
+
+  astrologer Astrologer @relation(fields: [astrologerId], references: [id])
+
+  @@map("astrologer_availability")
+}
+
+/// Files uploaded straight to object storage with a short-lived link. Documents carry the admin's review.
+model Upload {
+  id          String        @id @default(uuid()) @db.Uuid
+  ownerUserId String        @map("owner_user_id") @db.Uuid
+  purpose     UploadPurpose
+  storageKey  String        @unique @map("storage_key")
+  contentType String        @map("content_type")
+  sizeBytes   Int           @map("size_bytes")
+  status      UploadStatus  @default(pending)
+  review      DocReview     @default(pending)
+  reviewNote  String?       @map("review_note")
+  reviewedAt  DateTime?     @map("reviewed_at")
+  createdAt   DateTime      @map("created_at")
+  uploadedAt  DateTime?     @map("uploaded_at")
+
+  owner User @relation(fields: [ownerUserId], references: [id])
+
+  @@index([ownerUserId, purpose])
+  @@map("uploads")
 }

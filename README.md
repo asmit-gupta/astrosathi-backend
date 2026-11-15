@@ -106,6 +106,41 @@ append-only: a database trigger rejects UPDATE and DELETE.
 | POST | `/settings/:key/versions/:v/cancel` | Step-up. Cancels a version that hasn't taken effect |
 | GET | `/audit-logs` | Filters: `action`, `entityType`, `entityId`, `from`, `to`; `cursor`, `limit` |
 
+## Astrologers
+
+Same OTP login as the user app, with `"app": "provider"` in `/v1/auth/otp/verify`. Each app has its own session;
+a user-app token gets `403 WRONG_APP` on `/v1/provider`, and the reverse.
+
+Files go straight to object storage: `POST /v1/provider/uploads` returns a short-lived PUT link (type and size are
+signed into it), the app uploads, then calls `/uploads/:id/complete`. Without `STORAGE_*` set, uploads answer
+`503 STORAGE_NOT_CONFIGURED`.
+
+**Astrologer app (`/v1/provider`, provider session)**
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/uploads`, `/uploads/:id/complete` | `purpose`: photo, pan, id_front, id_back, experience_proof, intro_video |
+| GET | `/application` | Everything entered, status, open fixes, timeline (X1-4), interview, rejection |
+| PUT | `/application/basics` | Step 1: legal and display name, gender, city (`placeId`), languages, experience, photo |
+| PUT | `/application/expertise` | Step 2: methods, primary + up to 3 secondary topics, capabilities, bio (no guarantees, contacts or links) |
+| PUT | `/application/documents` | Step 3: PAN, ID type + front/back, optional proof, intro video |
+| PUT | `/application/payout` | Step 4: PAN number, bank account, IFSC (stored encrypted) |
+| PUT | `/application/rates` | Step 5: paise per minute per chosen mode; ₹50 cap for new astrologers |
+| POST | `/application/submit` | `agreements: {conduct: true, terms: true}`; refuses with `missing` steps |
+| POST | `/application/withdraw`, `/application/reapply` | Back to draft; reapply only after the date set on rejection |
+| GET | `/home` | After approval: per-mode switch, rate, online; pending rate changes |
+| PUT | `/availability` | `chat/voice/video` on/off (granted modes only), `awayMinutes` 15/30/60 or null |
+| POST | `/rates` | Cuts apply now; rises up to 20% after 24 h; bigger rises go to admin review |
+| POST | `/profile/revisions` | Name, bio, photo, languages, methods: applied after admin approval |
+
+**Public (`/v1`)**: `GET /method-tags`, `GET /languages`, `GET /astrologers?category=&method=&language=&mode=&gender=&online=1&sort=`,
+`GET /astrologers/:id` (profile with trust panel). Only approved, listed astrologers appear.
+
+**Admin (`/admin/v1`)**: `GET /astrologers?status=&q=`, `GET /astrologers/:id`, `POST …/kyc/reveal` (step-up),
+`POST …/documents/:uploadId/review`, `POST …/fixes`, `POST …/interview`, `POST …/approve` (step-up; documents verified,
+checks ticked), `POST …/reject`, `POST …/suspend` and `…/reinstate` (step-up), `GET /astrologer-revisions` +
+`POST …/:id/decide`, `GET /astrologer-rate-requests` + `POST …/:id/decide` (step-up). All audited.
+
 Settings and their defaults are defined in `src/modules/settings/registry.ts` (money in paise). Read them in code
 with `settings.get('platform_share_pct')`. Anything long-lived (a session, a pack) must snapshot the values it uses
 when it starts, so a change never alters work in progress.

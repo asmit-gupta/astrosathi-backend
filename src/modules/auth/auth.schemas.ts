@@ -14,6 +14,8 @@ export const verifyOtpBody = z.object({
   platform: z.enum(['android', 'ios', 'web']).optional(),
   appVersion: z.string().max(32).optional(),
   language: z.enum(['hi', 'en']).optional(),
+  // Which app is signing in. Each app has its own session, so the astrologer app never signs out the user app.
+  app: z.enum(['user', 'provider']).default('user'),
   // Login screen (W1 screen 5): terms and 18+ are required and start unticked; marketing is optional.
   consents: z.object({
     terms: z.literal(true, { errorMap: () => ({ message: 'Terms and Privacy Notice must be accepted' }) }),
