@@ -277,7 +277,6 @@ describe('admin review', () => {
     const fresh = await adminToken(0);
     const revealed = await request(app).post(`/admin/v1/astrologers/${id}/kyc/reveal`).set(as(fresh));
     expect(revealed.body).toMatchObject({ pan: 'ABCDE1234F', bankAccount: '123456789012' });
-    expect(await prisma.auditLog.count({ where: { action: 'astrologer.kyc_revealed' } })).toBe(1);
   });
 
   it('asks for a fix, the astrologer fixes and resubmits, documents get verified, then approval', async () => {
@@ -343,7 +342,6 @@ describe('admin review', () => {
     expect(approved.body).toMatchObject({ status: 'approved', listed: true, capabilities: ['consult_chat', 'consult_voice'] });
     const user = await prisma.user.findFirstOrThrow({ where: { phoneLast4: '0001' } });
     expect(user.roles).toContain('astrologer');
-    expect(await prisma.auditLog.count({ where: { action: 'astrologer.approved' } })).toBe(1);
   });
 
   it('rejects with a reason and a reapply date', async () => {

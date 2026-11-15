@@ -1,5 +1,4 @@
 import type { Prisma } from '@prisma/client';
-import { env } from '../../config/env';
 import { clock } from '../../lib/clock';
 import { prisma } from '../../lib/prisma';
 
@@ -18,17 +17,14 @@ export interface AuditEntry {
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
-const json = (v: unknown) => (v === undefined ? undefined : (v as Prisma.InputJsonValue));
+const AUDIT_OFF = true;
 
-/** Whether this action is recorded. AUDIT_ACTIONS: empty = nothing (founder's choice for now), "*" = all, or a list. */
-export function isRecorded(action: string): boolean {
-  const list = env.AUDIT_ACTIONS;
-  return list.includes('*') || list.includes(action);
-}
+const json = (v: unknown) => (v === undefined ? undefined : (v as Prisma.InputJsonValue));
 
 /** Write inside the same transaction as the change it describes, so neither exists without the other. */
 export async function record(db: Db, e: AuditEntry): Promise<void> {
-  if (!isRecorded(e.action)) return;
+  // Audit logging is off (founder's decision, 15 Nov 2026). Calls stay in place so it can be switched back on here.
+  if (AUDIT_OFF) return;
   await db.auditLog.create({
     data: {
       actorType: e.actorType,

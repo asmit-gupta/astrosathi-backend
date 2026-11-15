@@ -78,7 +78,6 @@ describe('admin login', () => {
       expect(res.status).toBe(401);
       expect(res.body.error.code).toBe('ADMIN_LOGIN_FAILED');
     }
-    expect(await prisma.auditLog.count({ where: { action: 'admin.login_failed' } })).toBe(3);
   });
 
   it('refuses a replayed code', async () => {
@@ -155,7 +154,6 @@ describe('step-up', () => {
       .set(auth)
       .send({ currentPassword: PASSWORD, newPassword: 'a much longer passphrase' });
     expect(ok.status).toBe(204);
-    expect(await prisma.auditLog.count({ where: { action: 'admin.password_changed' } })).toBe(1);
   });
 });
 
@@ -183,9 +181,6 @@ describe('settings', () => {
     expect(res.status).toBe(201);
     expect(await settings.get('topup_min_paise')).toBe(10_000);
 
-    const log = await prisma.auditLog.findFirstOrThrow({ where: { action: 'setting.scheduled' } });
-    expect(log).toMatchObject({ entityId: 'topup_min_paise', before: { value: 5000, version: 0 } });
-    expect(log.after).toMatchObject({ value: 10_000, version: 1 });
   });
 
   it('schedules a future change that takes effect at its time, and can cancel it before', async () => {
@@ -244,33 +239,16 @@ describe('settings', () => {
 });
 
 describe('audit log', () => {
-  it('cannot be edited or deleted, even directly in the database', async () => {
+  it('records nothing while audit logging is off', async () => {
     const t = await setup();
     await t.login();
-    const row = await prisma.auditLog.findFirstOrThrow({ where: { action: 'admin.login' } });
-    await expect(prisma.auditLog.update({ where: { id: row.id }, data: { action: 'tampered' } })).rejects.toThrow(/append-only/);
-    await expect(prisma.auditLog.delete({ where: { id: row.id } })).rejects.toThrow(/append-only/);
+    expect(await prisma.auditLog.count()).toBe(0);
   });
 
-  it('lists newest first with filters and cursor paging', async () => {
-    const t = await setup();
-    const auth = { Authorization: `Bearer ${(await t.login()).body.token}` };
-    for (let i = 0; i < 3; i++) {
-      await request(app)
-        .put('/admin/v1/settings/pack_validity_days')
-        .set(auth)
-        .send({ value: 60 + i, reason: `Change ${i}` });
-      t.advance(1);
-    }
-    const page1 = await request(app).get('/admin/v1/audit-logs').query({ action: 'setting.scheduled', limit: 2 }).set(auth);
-    expect(page1.body.items).toHaveLength(2);
-    expect(page1.body.items[0].after.value).toBe(62);
-    const page2 = await request(app)
-      .get('/admin/v1/audit-logs')
-      .query({ action: 'setting.scheduled', limit: 2, cursor: page1.body.nextCursor })
-      .set(auth);
-    expect(page2.body.items).toHaveLength(1);
-    expect(page2.body.nextCursor).toBeNull();
+  it('cannot be edited or deleted, even directly in the database', async () => {
+    const row = await prisma.auditLog.create({ data: { actorType: 'system', action: 'test', createdAt: new Date() } });
+    await expect(prisma.auditLog.update({ where: { id: row.id }, data: { action: 'tampered' } })).rejects.toThrow(/append-only/);
+    await expect(prisma.auditLog.delete({ where: { id: row.id } })).rejects.toThrow(/append-only/);
   });
 });
 
@@ -297,7 +275,7 @@ describe('admin client IP from the panel', () => {
   const failedLoginIp = async (headers: Record<string, string>) => {
     await setup();
     await request(app).post('/admin/v1/auth/login').set(headers).send({ email: EMAIL, password: 'wrong-wrong-wrong', code: '123456' });
-    const row = await prisma.auditLog.findFirstOrThrow({ where: { action: 'admin.login_failed' } });
+    const row = await prisma.adminLoginAttempt.findFirstOrThrow({ where: { success: false } });
     return row.ip;
   };
 
@@ -330,21 +308,3 @@ describe('admin client IP from the panel', () => {
   });
 });
 
-describe('audit recording switch', () => {
-  it('records nothing for actions not listed in AUDIT_ACTIONS', async () => {
-    const { env } = await import('../src/config/env');
-    const audit = await import('../src/modules/audit/audit.service');
-    const saved = [...env.AUDIT_ACTIONS];
-    env.AUDIT_ACTIONS.splice(0, env.AUDIT_ACTIONS.length, 'astrologer.approved');
-    try {
-      await audit.record(prisma, { actorType: 'admin', action: 'setting.scheduled' });
-      await audit.record(prisma, { actorType: 'admin', action: 'astrologer.approved' });
-      expect((await prisma.auditLog.findMany()).map((a) => a.action)).toEqual(['astrologer.approved']);
-      env.AUDIT_ACTIONS.splice(0, env.AUDIT_ACTIONS.length);
-      await audit.record(prisma, { actorType: 'admin', action: 'astrologer.approved' });
-      expect(await prisma.auditLog.count()).toBe(1);
-    } finally {
-      env.AUDIT_ACTIONS.splice(0, env.AUDIT_ACTIONS.length, ...saved);
-    }
-  });
-});

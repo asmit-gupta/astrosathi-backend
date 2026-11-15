@@ -15,6 +15,7 @@ import { hashPassword, MIN_ADMIN_PASSWORD_LENGTH } from '../src/lib/password';
 import { newTotpSecret, otpauthUri, timeStep, verifyTotp } from '../src/lib/totp';
 
 const prisma = new PrismaClient();
+const AUDIT_OFF = true;
 
 function ask(question: string, hidden = false): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
@@ -66,8 +67,8 @@ async function enrolTotp(email: string): Promise<{ secretEnc: string; step: numb
 }
 
 async function audit(action: string, actorId: string) {
-  const list = (process.env.AUDIT_ACTIONS ?? '').split(',').map((x) => x.trim());
-  if (!list.includes('*') && !list.includes(action)) return;
+  // Audit logging is off (founder's decision, 15 Nov 2026).
+  if (AUDIT_OFF) return;
   await prisma.auditLog.create({
     data: { actorType: 'system', actorId, action, reason: 'admin CLI', createdAt: new Date() },
   });

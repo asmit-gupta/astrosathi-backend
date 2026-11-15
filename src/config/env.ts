@@ -49,18 +49,6 @@ const schema = z
     STORAGE_ACCESS_KEY_ID: blankAsUnset(z.string().optional()),
     STORAGE_SECRET_ACCESS_KEY: blankAsUnset(z.string().optional()),
 
-    // Which admin actions go into the audit log: empty = none, "*" = all, or a comma list such as
-    // "astrologer.approved,setting.scheduled". Turned off for now by the founder; pick actions later.
-    AUDIT_ACTIONS: z
-      .string()
-      .default('')
-      .transform((v) =>
-        v
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
-      ),
-
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
 
     // Optional comma-separated IPs allowed to reach /admin. Empty = any IP (login still needs password + TOTP).

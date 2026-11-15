@@ -92,9 +92,7 @@ login ends the previous session; 5 failed logins from one IP lock that IP for 15
 With one admin there is no second approver. Sensitive actions instead need an authenticator code entered within
 the last 5 minutes (`POST /auth/step-up`).
 
-Audit log: recording is opt-in per action via `AUDIT_ACTIONS` (empty = nothing, `*` = everything, or a comma list such
-as `astrologer.approved,setting.scheduled`). It is off for now (founder's decision, 15 Nov 2026) and earlier entries
-were cleared. The table stays append-only: a database trigger rejects UPDATE and DELETE.
+Audit logging is off (founder's decision, 15 Nov 2026); earlier entries were cleared.
 
 | Method | Path | Notes |
 |---|---|---|
