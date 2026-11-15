@@ -3,7 +3,7 @@ import type { Request, RequestHandler } from 'express';
 import { env } from '../config/env';
 import { safeEqualHex, sha256 } from '../lib/crypto';
 import { forbidden, unauthorized } from '../lib/errors';
-import { authenticate, hasFreshStepUp } from '../modules/admin/adminAuth.service';
+import { authenticate, hasFreshStepUp, type AdminContext } from '../modules/admin/adminAuth.service';
 
 /**
  * The admin panel calls this API from its own server, so req.ip is the panel's address.
@@ -28,6 +28,12 @@ export const adminIpAllowlist: RequestHandler = (req, _res, next) => {
   }
   next();
 };
+
+/** The signed-in admin. Only valid on routes behind requireAdmin. */
+export function adminOf(req: Request): AdminContext {
+  if (!req.admin) throw unauthorized('ADMIN_SESSION_INVALID', 'Please sign in.');
+  return req.admin;
+}
 
 export const requireAdmin: RequestHandler = async (req, _res, next) => {
   const header = req.header('authorization');

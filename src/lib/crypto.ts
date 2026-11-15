@@ -1,4 +1,12 @@
-import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  randomInt,
+  timingSafeEqual,
+} from 'node:crypto';
 import { env } from '../config/env';
 
 const piiKey = Buffer.from(env.PII_ENCRYPTION_KEY, 'base64');

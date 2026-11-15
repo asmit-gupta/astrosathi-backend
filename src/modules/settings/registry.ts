@@ -40,14 +40,24 @@ export const SETTINGS = {
   ),
 
   // Astrologers
-  new_astrologer_rate_cap_paise: def('astrologers', 'Max per-minute rate for new astrologers (handoff D9)', paise, 5_000),
+  new_astrologer_rate_cap_paise: def(
+    'astrologers',
+    'Max per-minute rate for new astrologers (handoff D9)',
+    paise,
+    5_000,
+  ),
   new_astrologer_cap_days: def('astrologers', 'How long the new-astrologer cap lasts (handoff D9)', positiveInt, 90),
   rate_rise_review_pct: def('astrologers', 'Rate rises above this % go to Admin review', pct, 20),
   rate_min_paise: def('astrologers', 'Lowest per-minute rate an astrologer can set', paise, 500),
 
   // Sessions
   request_timeout_seconds: def('sessions', 'Time an astrologer has to accept a request', positiveInt, 30),
-  reconnect_window_seconds: def('sessions', 'Time to rejoin after a disconnect; billing paused meanwhile', positiveInt, 120),
+  reconnect_window_seconds: def(
+    'sessions',
+    'Time to rejoin after a disconnect; billing paused meanwhile',
+    positiveInt,
+    120,
+  ),
   checkin_interval_minutes: def('sessions', '"Continue?" check-in interval', positiveInt, 15),
   min_balance_minutes: def('sessions', 'Minutes of balance needed to start a session', positiveInt, 5),
 

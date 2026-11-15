@@ -46,9 +46,7 @@ catalogRouter.get('/places', async (req, res) => {
   if (!parsed.success) throw badRequest('VALIDATION_FAILED', 'q must be 2 to 60 characters');
   const { q, limit } = parsed.data;
 
-  const where = DEVANAGARI.test(q)
-    ? { aliasHi: { startsWith: q } }
-    : { searchName: { startsWith: q.toLowerCase() } };
+  const where = DEVANAGARI.test(q) ? { aliasHi: { startsWith: q } } : { searchName: { startsWith: q.toLowerCase() } };
   const places = await prisma.place.findMany({ where, orderBy: { population: 'desc' }, take: limit });
   res.json({ places: places.map(placeView) });
 });

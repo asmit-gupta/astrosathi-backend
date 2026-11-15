@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAnyAuth } from '../../middleware/auth';
+import { authOf, requireAnyAuth } from '../../middleware/auth';
 import { validateBody } from '../../middleware/validate';
 import { maskPhone, decryptPhone } from '../../lib/phone';
 import { notFound } from '../../lib/errors';
@@ -28,17 +28,17 @@ authRouter.post('/token/refresh', validateBody(refreshBody), async (req, res) =>
 });
 
 authRouter.post('/logout', requireAnyAuth, async (req, res) => {
-  await revokeSession(req.auth!.sessionId, 'logout');
+  await revokeSession(authOf(req).sessionId, 'logout');
   res.status(204).end();
 });
 
 /** Who am I signed in as. The full profile lives in the users module (GET /v1/me). */
 authRouter.get('/session', requireAnyAuth, async (req, res) => {
   const user = await prisma.user.findUnique({
-    where: { id: req.auth!.userId },
+    where: { id: authOf(req).userId },
     select: { id: true, phoneEnc: true, name: true, language: true, status: true, roles: true },
   });
   if (!user) throw notFound('USER_NOT_FOUND', 'User not found');
   const { phoneEnc, ...rest } = user;
-  res.json({ sessionId: req.auth!.sessionId, user: { ...rest, phone: maskPhone(decryptPhone(phoneEnc)) } });
+  res.json({ sessionId: authOf(req).sessionId, user: { ...rest, phone: maskPhone(decryptPhone(phoneEnc)) } });
 });

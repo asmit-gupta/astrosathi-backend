@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { clock } from '../../lib/clock';
-import { prisma } from '../../lib/prisma';
+import { type prisma } from '../../lib/prisma';
 
 export interface AuditEntry {
   actorType: 'admin' | 'system' | 'user';
@@ -40,32 +40,4 @@ export async function record(db: Db, e: AuditEntry): Promise<void> {
       createdAt: clock.now(),
     },
   });
-}
-
-export interface AuditQuery {
-  action?: string;
-  entityType?: string;
-  entityId?: string;
-  from?: Date;
-  to?: Date;
-  cursor?: string;
-  limit: number;
-}
-
-/** Newest first, cursor-paginated by id. */
-export async function list(q: AuditQuery) {
-  const rows = await prisma.auditLog.findMany({
-    where: {
-      action: q.action,
-      entityType: q.entityType,
-      entityId: q.entityId,
-      createdAt: { gte: q.from, lte: q.to },
-    },
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-    take: q.limit + 1,
-    ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
-  });
-  const hasMore = rows.length > q.limit;
-  const items = hasMore ? rows.slice(0, q.limit) : rows;
-  return { items, nextCursor: hasMore ? items[items.length - 1]!.id : null };
 }

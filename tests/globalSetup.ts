@@ -29,7 +29,14 @@ export default async function setup() {
     const dir = path.resolve(__dirname, '../.test-pg');
     rmSync(dir, { recursive: true, force: true });
     const port = await freePort();
-    pg = new EmbeddedPostgres({ databaseDir: dir, user: 'test', password: 'test', port, persistent: false, onLog: () => {} });
+    pg = new EmbeddedPostgres({
+      databaseDir: dir,
+      user: 'test',
+      password: 'test',
+      port,
+      persistent: false,
+      onLog: () => {},
+    });
     await pg.initialise();
     await pg.start();
     await pg.createDatabase('astrolive_test');

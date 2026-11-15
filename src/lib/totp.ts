@@ -48,7 +48,7 @@ export function hotp(secret: Buffer, counter: number, digits = DIGITS, algo: 'sh
   const msg = Buffer.alloc(8);
   msg.writeBigUInt64BE(BigInt(counter));
   const mac = createHmac(algo, secret).update(msg).digest();
-  const offset = mac[mac.length - 1]! & 0x0f;
+  const offset = (mac.at(-1) ?? 0) & 0x0f;
   const bin = (mac.readUInt32BE(offset) & 0x7fffffff) % 10 ** digits;
   return bin.toString().padStart(digits, '0');
 }

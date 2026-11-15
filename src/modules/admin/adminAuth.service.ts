@@ -32,19 +32,31 @@ async function consumeTotp(adminId: string, secretEnc: string, lastStep: bigint,
 export async function login(input: { email: string; password: string; code: string }, meta: Meta) {
   const now = clock.now();
   const since = addSeconds(now, -adminPolicy.loginFailures.windowSeconds);
-  const failures = await prisma.adminLoginAttempt.count({ where: { ip: meta.ip, success: false, createdAt: { gt: since } } });
+  const failures = await prisma.adminLoginAttempt.count({
+    where: { ip: meta.ip, success: false, createdAt: { gt: since } },
+  });
   if (failures >= adminPolicy.loginFailures.max) {
-    throw tooManyRequests('ADMIN_LOGIN_LOCKED', 'Too many failed attempts. Try again later.', adminPolicy.loginFailures.windowSeconds);
+    throw tooManyRequests(
+      'ADMIN_LOGIN_LOCKED',
+      'Too many failed attempts. Try again later.',
+      adminPolicy.loginFailures.windowSeconds,
+    );
   }
 
   const admin = await prisma.admin.findUnique({ where: { email: input.email.trim().toLowerCase() } });
   const passwordOk = await verifyPassword(input.password, admin?.passwordHash ?? (await getDummyHash()));
-  const ok = !!admin && passwordOk && (await consumeTotp(admin.id, admin.totpSecretEnc, admin.lastTotpStep, input.code));
+  const ok =
+    !!admin && passwordOk && (await consumeTotp(admin.id, admin.totpSecretEnc, admin.lastTotpStep, input.code));
 
   if (!ok || !admin) {
     await prisma.$transaction(async (tx) => {
       await tx.adminLoginAttempt.create({ data: { ip: meta.ip, success: false, createdAt: now } });
-      await audit.record(tx, { actorType: 'admin', action: 'admin.login_failed', ip: meta.ip, userAgent: meta.userAgent });
+      await audit.record(tx, {
+        actorType: 'admin',
+        action: 'admin.login_failed',
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      });
     });
     throw loginFailed();
   }
@@ -65,7 +77,13 @@ export async function login(input: { email: string; password: string; code: stri
         stepUpAt: now, // a code was just entered
       },
     });
-    await audit.record(tx, { actorType: 'admin', actorId: admin.id, action: 'admin.login', ip: meta.ip, userAgent: meta.userAgent });
+    await audit.record(tx, {
+      actorType: 'admin',
+      actorId: admin.id,
+      action: 'admin.login',
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
   });
 
   return {
@@ -122,7 +140,8 @@ export async function changePassword(ctx: AdminContext, current: string, next: s
     throw new AppError(400, 'PASSWORD_TOO_SHORT', `Use at least ${MIN_ADMIN_PASSWORD_LENGTH} characters.`);
   }
   const admin = await prisma.admin.findUniqueOrThrow({ where: { id: ctx.adminId } });
-  if (!(await verifyPassword(current, admin.passwordHash))) throw unauthorized('ADMIN_PASSWORD_WRONG', 'Current password is wrong.');
+  if (!(await verifyPassword(current, admin.passwordHash)))
+    throw unauthorized('ADMIN_PASSWORD_WRONG', 'Current password is wrong.');
 
   const now = clock.now();
   const passwordHash = await hashPassword(next);
@@ -132,7 +151,13 @@ export async function changePassword(ctx: AdminContext, current: string, next: s
       where: { adminId: admin.id, revokedAt: null, id: { not: ctx.sessionId } },
       data: { revokedAt: now },
     });
-    await audit.record(tx, { actorType: 'admin', actorId: admin.id, action: 'admin.password_changed', ip: meta.ip, userAgent: meta.userAgent });
+    await audit.record(tx, {
+      actorType: 'admin',
+      actorId: admin.id,
+      action: 'admin.password_changed',
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
   });
 }
 

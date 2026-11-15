@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { type Prisma } from '@prisma/client';
 import { sms } from '../../adapters/sms';
 import { authPolicy } from '../../config/authPolicy';
 import { addSeconds, clock } from '../../lib/clock';
@@ -20,7 +20,11 @@ async function assertNotLocked(db: Tx, phoneHash: string, now: Date) {
     select: { lockedUntil: true },
   });
   if (locked?.lockedUntil) {
-    throw tooManyRequests('OTP_LOCKED', 'Too many wrong codes. Try again later.', secondsUntil(locked.lockedUntil, now));
+    throw tooManyRequests(
+      'OTP_LOCKED',
+      'Too many wrong codes. Try again later.',
+      secondsUntil(locked.lockedUntil, now),
+    );
   }
 }
 
@@ -39,9 +43,13 @@ async function assertWindow(
     select: { createdAt: true },
     take: limit.max,
   });
-  if (recent.length >= limit.max) {
-    const oldest = recent[0]!.createdAt;
-    throw tooManyRequests(code, 'Too many code requests. Try again later.', secondsUntil(addSeconds(oldest, limit.windowSeconds), now));
+  const oldest = recent[0]?.createdAt;
+  if (oldest && recent.length >= limit.max) {
+    throw tooManyRequests(
+      code,
+      'Too many code requests. Try again later.',
+      secondsUntil(addSeconds(oldest, limit.windowSeconds), now),
+    );
   }
 }
 
@@ -68,7 +76,11 @@ export async function sendOtp({ mobile, phoneHash, deviceId, ip }: SendOtpParams
     });
     const cooldownEnds = last && addSeconds(last.createdAt, policy.resendCooldownSeconds);
     if (cooldownEnds && cooldownEnds > now) {
-      throw tooManyRequests('OTP_RESEND_COOLDOWN', 'Please wait before asking for a new code.', secondsUntil(cooldownEnds, now));
+      throw tooManyRequests(
+        'OTP_RESEND_COOLDOWN',
+        'Please wait before asking for a new code.',
+        secondsUntil(cooldownEnds, now),
+      );
     }
 
     await assertWindow(tx, { phoneHash }, policy.perPhone, 'OTP_RATE_LIMITED', now);

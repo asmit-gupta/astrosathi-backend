@@ -4,7 +4,7 @@
  *   npm run db:seed   (runs prisma/run-seed.ts)
  */
 import { readFileSync } from 'node:fs';
-import { PrismaClient } from '@prisma/client';
+import { type PrismaClient } from '@prisma/client';
 
 // Spec §7.10: the nine topic categories. Health is deliberately not a category (§7.9).
 export const CATEGORIES = [
@@ -36,17 +36,29 @@ function readPlaces() {
   const file = new URL('./seed-data/places-in.tsv', import.meta.url);
   const [, ...lines] = readFileSync(file, 'utf8').trimEnd().split('\n');
   return lines.map((line) => {
-    const [id, name, asciiName, aliasHi, state, lat, lng, tzId, population] = line.split('\t');
+    const cols = line.split('\t');
+    if (cols.length < 9) throw new Error(`places-in.tsv: bad row "${line.slice(0, 60)}"`);
+    const [id, name, asciiName, aliasHi, state, lat, lng, tzId, population] = cols as [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+    ];
     return {
       id: Number(id),
-      name: name!,
-      asciiName: asciiName!,
+      name,
+      asciiName,
       aliasHi: aliasHi || null,
-      state: state!,
-      searchName: asciiName!.toLowerCase(),
-      lat: lat!,
-      lng: lng!,
-      tzId: tzId!,
+      state,
+      searchName: asciiName.toLowerCase(),
+      lat,
+      lng,
+      tzId,
       population: Number(population),
     };
   });
@@ -69,5 +81,10 @@ export async function seed(prisma: PrismaClient) {
     const res = await prisma.place.createMany({ data: places.slice(i, i + 1000), skipDuplicates: true });
     placesAdded += res.count;
   }
-  return { categoriesAdded: categories.count, methodTagsAdded: methodTags.count, placesAdded, placesInFile: places.length };
+  return {
+    categoriesAdded: categories.count,
+    methodTagsAdded: methodTags.count,
+    placesAdded,
+    placesInFile: places.length,
+  };
 }

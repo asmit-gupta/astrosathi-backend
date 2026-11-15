@@ -485,11 +485,7 @@
   ],
   "typography": {
     "family": "Noto Sans (Latin) + Noto Sans Devanagari (Hindi)",
-    "weights": [
-      400,
-      600,
-      700
-    ],
+    "weights": [400, 600, 700],
     "why": "One designed family across both scripts, covers the ₹ sign, and is the Android system font family so it needs no download on low-end phones.",
     "check_before_locking": "Hindi and English side by side at 14px and 16px on a cheap Android phone; ₹ sign and tabular numerals in prices and the money meter.",
     "use": {
@@ -507,11 +503,6 @@
       "one colour white on ink",
       "one colour saffron on white (stamp, WhatsApp share)"
     ],
-    "avoid": [
-      "yellow",
-      "violet",
-      "gold gradients",
-      "stars and moons as the symbol (the category cliché)"
-    ]
+    "avoid": ["yellow", "violet", "gold gradients", "stars and moons as the symbol (the category cliché)"]
   }
 }

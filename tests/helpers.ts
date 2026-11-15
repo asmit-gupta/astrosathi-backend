@@ -1,9 +1,17 @@
+import type { Server } from 'node:http';
 import request from 'supertest';
+import { afterAll } from 'vitest';
 import { sms, type SendOtpInput, type SmsProvider } from '../src/adapters/sms';
 import { createApp } from '../src/app';
 import { clock } from '../src/lib/clock';
 
-export const app = createApp();
+/**
+ * One server per test file, bound to 127.0.0.1 so the OS hands out a port that is free on that
+ * address. (Letting supertest bind a random port per request on all interfaces can collide with
+ * another local service on 127.0.0.1, which then answers instead of our app.)
+ */
+export const app: Server = createApp().listen(0, '127.0.0.1');
+afterAll(() => new Promise<void>((resolve) => app.close(() => resolve())));
 
 /** Captures codes instead of sending SMS; can be switched to fail. */
 export class FakeSms implements SmsProvider {
@@ -41,7 +49,9 @@ export const DEVICE = 'device-aaaa-1111';
 export const CONSENTS = { terms: true, age18: true };
 
 export const sendOtp = (body: Record<string, unknown> = {}) =>
-  request(app).post('/v1/auth/otp/send').send({ mobile: MOBILE, deviceId: DEVICE, ...body });
+  request(app)
+    .post('/v1/auth/otp/send')
+    .send({ mobile: MOBILE, deviceId: DEVICE, ...body });
 
 export const verifyOtp = (code: string, body: Record<string, unknown> = {}) =>
   request(app)

@@ -36,7 +36,11 @@ async function editStep(userId: string, fn: (tx: Prisma.TransactionClient, a: As
   await prisma.$transaction(async (tx) => {
     const [row] = await tx.$queryRaw<Astrologer[]>`SELECT * FROM astrologers WHERE id = ${a.id}::uuid FOR UPDATE`;
     if (!row || !EDITABLE.has(row.status)) {
-      throw new AppError(409, 'APPLICATION_LOCKED', 'Your application is being reviewed and cannot be changed right now.');
+      throw new AppError(
+        409,
+        'APPLICATION_LOCKED',
+        'Your application is being reviewed and cannot be changed right now.',
+      );
     }
     await fn(tx, a);
     await tx.astrologer.update({ where: { id: a.id }, data: { updatedAt: clock.now() } });
@@ -69,11 +73,17 @@ export function bioProblems(bio: string): string[] {
 }
 
 export async function assertTopicsAndMethods(db: Prisma.TransactionClient, categories: string[], methods?: string[]) {
-  const cats = await db.category.findMany({ where: { slug: { in: categories }, active: true }, select: { slug: true } });
+  const cats = await db.category.findMany({
+    where: { slug: { in: categories }, active: true },
+    select: { slug: true },
+  });
   const unknownCats = categories.filter((c) => !cats.some((k) => k.slug === c));
   if (unknownCats.length) throw badRequest('UNKNOWN_TOPIC', 'Unknown topic', { topics: unknownCats });
   if (methods) {
-    const tags = await db.methodTag.findMany({ where: { slug: { in: methods }, active: true }, select: { slug: true } });
+    const tags = await db.methodTag.findMany({
+      where: { slug: { in: methods }, active: true },
+      select: { slug: true },
+    });
     const unknown = methods.filter((m) => !tags.some((t) => t.slug === m));
     if (unknown.length) throw badRequest('UNKNOWN_METHOD', 'Unknown method', { methods: unknown });
   }
@@ -84,9 +94,13 @@ export const saveExpertise = (userId: string, b: ExpertiseInput) =>
     await assertTopicsAndMethods(tx, [b.primaryCategory, ...b.secondaryCategories], b.methods);
     const problems = bioProblems(b.bio);
     if (problems.length) {
-      throw badRequest('BIO_NOT_ALLOWED', 'Your bio has words we cannot allow (guarantees, cures, contact details or links).', {
-        matches: problems,
-      });
+      throw badRequest(
+        'BIO_NOT_ALLOWED',
+        'Your bio has words we cannot allow (guarantees, cures, contact details or links).',
+        {
+          matches: problems,
+        },
+      );
     }
     await tx.astrologer.update({
       where: { id: a.id },
@@ -132,7 +146,11 @@ export const savePayout = (userId: string, b: PayoutInput) =>
       gstin: b.gstin,
       updatedAt: clock.now(),
     };
-    await tx.astrologerKyc.upsert({ where: { astrologerId: a.id }, update: data, create: { astrologerId: a.id, ...data } });
+    await tx.astrologerKyc.upsert({
+      where: { astrologerId: a.id },
+      update: data,
+      create: { astrologerId: a.id, ...data },
+    });
   });
 
 export const saveRates = (userId: string, b: RatesInput) =>
@@ -144,25 +162,48 @@ export const saveRates = (userId: string, b: RatesInput) =>
       await assertRateAllowed(a, mode, rate);
     }
     // Asking again replaces the earlier ask.
-    await tx.astrologerRate.updateMany({ where: { astrologerId: a.id, status: 'requested' }, data: { status: 'cancelled', decidedAt: now } });
+    await tx.astrologerRate.updateMany({
+      where: { astrologerId: a.id, status: 'requested' },
+      data: { status: 'cancelled', decidedAt: now },
+    });
     for (const mode of MODES) {
       const rate = b[mode];
-      if (rate !== undefined) await tx.astrologerRate.create({ data: { astrologerId: a.id, mode, ratePaise: rate, status: 'requested', createdAt: now } });
+      if (rate !== undefined)
+        await tx.astrologerRate.create({
+          data: { astrologerId: a.id, mode, ratePaise: rate, status: 'requested', createdAt: now },
+        });
     }
   });
 
 /** Which required parts are missing, per step. Empty means ready to submit. */
 export async function missingParts(db: Prisma.TransactionClient, a: Astrologer): Promise<string[]> {
   const missing: string[] = [];
-  if (!a.legalName || !a.displayName || !a.gender || !a.placeId || a.languages.length === 0 || a.experienceYears === null || !a.photoUploadId) {
+  if (
+    !a.legalName ||
+    !a.displayName ||
+    !a.gender ||
+    !a.placeId ||
+    a.languages.length === 0 ||
+    a.experienceYears === null ||
+    !a.photoUploadId
+  ) {
     missing.push('basics');
   }
-  if (a.methods.length === 0 || !a.primaryCategory || !a.bio || !a.capabilitiesRequested.some((c) => c.startsWith('consult_'))) {
+  if (
+    a.methods.length === 0 ||
+    !a.primaryCategory ||
+    !a.bio ||
+    !a.capabilitiesRequested.some((c) => c.startsWith('consult_'))
+  ) {
     missing.push('expertise');
   }
   if (!a.panUploadId || !a.idType || !a.idFrontUploadId || !a.introVideoUploadId) missing.push('documents');
-  if (!(await db.astrologerKyc.findUnique({ where: { astrologerId: a.id }, select: { astrologerId: true } }))) missing.push('payout');
-  const requested = await db.astrologerRate.findMany({ where: { astrologerId: a.id, status: 'requested' }, select: { mode: true } });
+  if (!(await db.astrologerKyc.findUnique({ where: { astrologerId: a.id }, select: { astrologerId: true } })))
+    missing.push('payout');
+  const requested = await db.astrologerRate.findMany({
+    where: { astrologerId: a.id, status: 'requested' },
+    select: { mode: true },
+  });
   const wantedModes = a.capabilitiesRequested.filter((c) => c.startsWith('consult_')).map((c) => c.slice(8));
   if (wantedModes.length === 0 || wantedModes.some((m) => !requested.some((r) => r.mode === m))) missing.push('rates');
   return missing;
@@ -172,7 +213,8 @@ export async function submit(userId: string, ip: string | undefined) {
   const a = await getOrCreate(userId);
   await prisma.$transaction(async (tx) => {
     const [row] = await tx.$queryRaw<Astrologer[]>`SELECT * FROM astrologers WHERE id = ${a.id}::uuid FOR UPDATE`;
-    if (!row || !EDITABLE.has(row.status)) throw new AppError(409, 'APPLICATION_LOCKED', 'This application was already submitted.');
+    if (!row || !EDITABLE.has(row.status))
+      throw new AppError(409, 'APPLICATION_LOCKED', 'This application was already submitted.');
     const fresh = await tx.astrologer.findUniqueOrThrow({ where: { id: a.id } });
     const missing = await missingParts(tx, fresh);
     if (missing.length) throw badRequest('APPLICATION_INCOMPLETE', 'Some steps are not finished.', { missing });
@@ -180,15 +222,27 @@ export async function submit(userId: string, ip: string | undefined) {
     const now = clock.now();
     const resubmit = fresh.status === 'needs_changes';
     for (const docType of ['provider_conduct', 'provider_terms'] as const) {
-      const has = await tx.consent.findFirst({ where: { userId, docType, docVersion: PROVIDER_AGREEMENT_VERSION, withdrawnAt: null } });
+      const has = await tx.consent.findFirst({
+        where: { userId, docType, docVersion: PROVIDER_AGREEMENT_VERSION, withdrawnAt: null },
+      });
       if (!has) {
         await tx.consent.create({
-          data: { userId, docType, docVersion: PROVIDER_AGREEMENT_VERSION, channel: 'provider_application', ip, grantedAt: now },
+          data: {
+            userId,
+            docType,
+            docVersion: PROVIDER_AGREEMENT_VERSION,
+            channel: 'provider_application',
+            ip,
+            grantedAt: now,
+          },
         });
       }
     }
     await tx.applicationFix.updateMany({ where: { astrologerId: a.id, resolvedAt: null }, data: { resolvedAt: now } });
-    await tx.astrologer.update({ where: { id: a.id }, data: { status: 'submitted', submittedAt: now, updatedAt: now } });
+    await tx.astrologer.update({
+      where: { id: a.id },
+      data: { status: 'submitted', submittedAt: now, updatedAt: now },
+    });
     await tx.astrologerEvent.create({
       data: { astrologerId: a.id, type: resubmit ? 'resubmitted' : 'submitted', actor: 'astrologer', createdAt: now },
     });
@@ -204,8 +258,13 @@ export async function withdraw(userId: string) {
   }
   const now = clock.now();
   await prisma.$transaction([
-    prisma.astrologer.update({ where: { id: a.id }, data: { status: 'draft', interviewAt: null, interviewLink: null, updatedAt: now } }),
-    prisma.astrologerEvent.create({ data: { astrologerId: a.id, type: 'withdrawn', actor: 'astrologer', createdAt: now } }),
+    prisma.astrologer.update({
+      where: { id: a.id },
+      data: { status: 'draft', interviewAt: null, interviewLink: null, updatedAt: now },
+    }),
+    prisma.astrologerEvent.create({
+      data: { astrologerId: a.id, type: 'withdrawn', actor: 'astrologer', createdAt: now },
+    }),
   ]);
   return view(userId);
 }
@@ -220,7 +279,9 @@ export async function reapply(userId: string) {
   const now = clock.now();
   await prisma.$transaction([
     prisma.astrologer.update({ where: { id: a.id }, data: { status: 'draft', rejectReason: null, updatedAt: now } }),
-    prisma.astrologerEvent.create({ data: { astrologerId: a.id, type: 'reapplied', actor: 'astrologer', createdAt: now } }),
+    prisma.astrologerEvent.create({
+      data: { astrologerId: a.id, type: 'reapplied', actor: 'astrologer', createdAt: now },
+    }),
   ]);
   return view(userId);
 }

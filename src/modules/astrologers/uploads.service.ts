@@ -38,18 +38,32 @@ export async function completeUpload(userId: string, uploadId: string) {
   const head = await storage.get().head(upload.storageKey);
   if (!head) throw badRequest('UPLOAD_MISSING', 'The file has not arrived yet. Please upload it again.');
   if (head.sizeBytes !== upload.sizeBytes || (head.contentType && head.contentType !== upload.contentType)) {
-    logger.warn({ uploadId, head, expected: { sizeBytes: upload.sizeBytes, contentType: upload.contentType } }, 'Upload mismatch');
+    logger.warn(
+      { uploadId, head, expected: { sizeBytes: upload.sizeBytes, contentType: upload.contentType } },
+      'Upload mismatch',
+    );
     throw badRequest('UPLOAD_MISMATCH', 'The uploaded file does not match. Please upload it again.');
   }
-  const updated = await prisma.upload.update({ where: { id: upload.id }, data: { status: 'uploaded', uploadedAt: clock.now() } });
+  const updated = await prisma.upload.update({
+    where: { id: upload.id },
+    data: { status: 'uploaded', uploadedAt: clock.now() },
+  });
   return uploadView(updated);
 }
 
 /** An upload the caller owns, finished, and of the right kind; throws otherwise. Used when a step references a file. */
-export async function assertUsableUpload(db: Prisma.TransactionClient, userId: string, uploadId: string, purpose: UploadPurpose) {
+export async function assertUsableUpload(
+  db: Prisma.TransactionClient,
+  userId: string,
+  uploadId: string,
+  purpose: UploadPurpose,
+) {
   const upload = await db.upload.findFirst({ where: { id: uploadId, ownerUserId: userId } });
   if (!upload || upload.purpose !== purpose || upload.status !== 'uploaded') {
-    throw badRequest('UPLOAD_INVALID', `Upload ${uploadId} is not a finished ${purpose} upload.`, { uploadId, purpose });
+    throw badRequest('UPLOAD_INVALID', `Upload ${uploadId} is not a finished ${purpose} upload.`, {
+      uploadId,
+      purpose,
+    });
   }
   return upload;
 }

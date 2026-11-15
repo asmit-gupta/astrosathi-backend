@@ -10,11 +10,11 @@ The product name is **AstroSaathi** (older documents say "AstroLive"; that was a
 
 Three surfaces, one codebase family:
 
-| Surface | Who | Platforms | Entry point |
-| --- | --- | --- | --- |
-| User app | People who consult, shop and join live shows | Android, iOS, web | `apps/user_app` |
-| Provider app (astrologer app) | Astrologers and pandits | Android, iOS, web | `apps/provider_app` |
-| Admin panel | Staff | Web only (desktop first, 1280 px and up) | `apps/admin_web` |
+| Surface                       | Who                                          | Platforms                                | Entry point         |
+| ----------------------------- | -------------------------------------------- | ---------------------------------------- | ------------------- |
+| User app                      | People who consult, shop and join live shows | Android, iOS, web                        | `apps/user_app`     |
+| Provider app (astrologer app) | Astrologers and pandits                      | Android, iOS, web                        | `apps/provider_app` |
+| Admin panel                   | Staff                                        | Web only (desktop first, 1280 px and up) | `apps/admin_web`    |
 
 All three use Flutter and share packages. The wireframe boards are the acceptance criteria: W1 to W13 (user), X1 to X4 (provider), Y1 to Y17 (admin). The numbered notes under each wireframe are requirements, not suggestions. Ask the founder to export the boards and notes into `docs/wireframes/` of the frontend repo so they are readable offline.
 
@@ -24,19 +24,19 @@ All release-1 features ship together: per-minute chat, voice and video, free liv
 
 ## 2. Decisions this guide makes (change only with the founder)
 
-| Area | Choice | Why |
-| --- | --- | --- |
-| Framework | Flutter, stable channel, Dart 3 | Founder's choice |
-| Repo layout | One workspace, managed with Melos | Shared design system and API client across three apps |
-| State | Riverpod (with code generation) | Testable, no widget-tree coupling |
-| Routing | `go_router`, every screen a URL | Web needs real URLs and deep links; the same routes serve mobile deep links |
-| Networking | `dio`, with a Dart client generated from the backend's OpenAPI spec | One source of truth for the API |
-| Models | `freezed` and `json_serializable` | Immutable, generated |
-| Storage | `flutter_secure_storage` for tokens, `drift` or `hive` for cached data | Tokens never in plain preferences |
-| Localisation | `flutter_localizations` plus ARB files (Hindi and English) | Built in; see section 4 for the glossary layer |
-| Push | Firebase Cloud Messaging | Standard |
-| Calls and live | Behind an `RtcClient` interface (section 8) | Cloudflare is the provider; it must be replaceable |
-| Payments | Behind a `PaymentClient` interface (section 9) | PayU is the provider; it must be replaceable |
+| Area           | Choice                                                                 | Why                                                                         |
+| -------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Framework      | Flutter, stable channel, Dart 3                                        | Founder's choice                                                            |
+| Repo layout    | One workspace, managed with Melos                                      | Shared design system and API client across three apps                       |
+| State          | Riverpod (with code generation)                                        | Testable, no widget-tree coupling                                           |
+| Routing        | `go_router`, every screen a URL                                        | Web needs real URLs and deep links; the same routes serve mobile deep links |
+| Networking     | `dio`, with a Dart client generated from the backend's OpenAPI spec    | One source of truth for the API                                             |
+| Models         | `freezed` and `json_serializable`                                      | Immutable, generated                                                        |
+| Storage        | `flutter_secure_storage` for tokens, `drift` or `hive` for cached data | Tokens never in plain preferences                                           |
+| Localisation   | `flutter_localizations` plus ARB files (Hindi and English)             | Built in; see section 4 for the glossary layer                              |
+| Push           | Firebase Cloud Messaging                                               | Standard                                                                    |
+| Calls and live | Behind an `RtcClient` interface (section 8)                            | Cloudflare is the provider; it must be replaceable                          |
+| Payments       | Behind a `PaymentClient` interface (section 9)                         | PayU is the provider; it must be replaceable                                |
 
 If you disagree with a choice, say so in a short note to the founder with the reason before changing it.
 
@@ -81,10 +81,10 @@ The founder may sell a standalone app for another domain by changing names and g
 
 ### 4.1 Two kinds of configuration
 
-| Kind | Examples | When it is applied |
-| --- | --- | --- |
-| Build-time (per brand) | App name, bundle and package id, icons, splash, launcher label, default colours, fonts, store listing text, Firebase files, deep-link domains | Chosen at build; the brand folder in `brands/<brand>/` |
-| Runtime (per tenant, from the backend) | Glossary, topic list, feature flags, legal and help links, banners, copy overrides, support contacts | Fetched at start from `GET /v1/tenant-config`, cached, refreshed in the background |
+| Kind                                   | Examples                                                                                                                                      | When it is applied                                                                 |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Build-time (per brand)                 | App name, bundle and package id, icons, splash, launcher label, default colours, fonts, store listing text, Firebase files, deep-link domains | Chosen at build; the brand folder in `brands/<brand>/`                             |
+| Runtime (per tenant, from the backend) | Glossary, topic list, feature flags, legal and help links, banners, copy overrides, support contacts                                          | Fetched at start from `GET /v1/tenant-config`, cached, refreshed in the background |
 
 Coordinate with the backend agent: the backend needs a tenant concept and this endpoint. Until it exists, load the same JSON from `brands/<brand>/tenant_config.json`, behind the same interface.
 
@@ -97,10 +97,10 @@ One JSON file per brand, parsed into a typed class in `core_brand`:
   "brandId": "default",
   "displayName": "AstroSaathi",
   "tagline": "...",
-  "logo": {"wordmark": "assets/logo_wordmark.svg", "mark": "assets/logo_mark.svg"},
+  "logo": { "wordmark": "assets/logo_wordmark.svg", "mark": "assets/logo_mark.svg" },
   "appIcon": "assets/app_icon.png",
   "tokens": "tokens.json",
-  "fonts": {"latin": "Noto Sans", "devanagari": "Noto Sans Devanagari"},
+  "fonts": { "latin": "Noto Sans", "devanagari": "Noto Sans Devanagari" },
   "deepLinkHosts": ["example.com"],
   "supportEmail": "...",
   "locales": ["hi", "en"],
@@ -117,16 +117,16 @@ Domain words are keys, not text. The first brand's values are astrology words. A
 ```json
 {
   "hi": {
-    "provider":      {"one": "ज्योतिषी", "other": "ज्योतिषी"},
-    "session":       {"one": "परामर्श",   "other": "परामर्श"},
-    "topic":         {"one": "विषय",      "other": "विषय"},
-    "chart":         {"one": "कुंडली",    "other": "कुंडलियाँ"}
+    "provider": { "one": "ज्योतिषी", "other": "ज्योतिषी" },
+    "session": { "one": "परामर्श", "other": "परामर्श" },
+    "topic": { "one": "विषय", "other": "विषय" },
+    "chart": { "one": "कुंडली", "other": "कुंडलियाँ" }
   },
   "en": {
-    "provider":      {"one": "astrologer", "other": "astrologers"},
-    "session":       {"one": "consultation", "other": "consultations"},
-    "topic":         {"one": "topic", "other": "topics"},
-    "chart":         {"one": "Kundli", "other": "Kundlis"}
+    "provider": { "one": "astrologer", "other": "astrologers" },
+    "session": { "one": "consultation", "other": "consultations" },
+    "topic": { "one": "topic", "other": "topics" },
+    "chart": { "one": "Kundli", "other": "Kundlis" }
   }
 }
 ```
@@ -196,10 +196,10 @@ Touch targets are at least 48 by 48 logical pixels. Support screen readers on ev
 
 Flutter targets phones, tablets and the browser from one code path. Use these breakpoints (logical pixels):
 
-| Class | Width | Navigation | Layout |
-| --- | --- | --- | --- |
-| Compact | under 600 | Bottom bar | One column, full width |
-| Medium | 600 to 1023 | Navigation rail | One or two columns, content capped at 720 |
+| Class    | Width       | Navigation      | Layout                                       |
+| -------- | ----------- | --------------- | -------------------------------------------- |
+| Compact  | under 600   | Bottom bar      | One column, full width                       |
+| Medium   | 600 to 1023 | Navigation rail | One or two columns, content capped at 720    |
 | Expanded | 1024 and up | Side navigation | Two or three columns, content capped at 1200 |
 
 Rules:

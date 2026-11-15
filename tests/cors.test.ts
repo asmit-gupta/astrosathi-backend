@@ -33,7 +33,8 @@ describe('request log', () => {
       vi.spyOn(logger, level).mockImplementation(((obj: Record<string, unknown>, msg: string) => {
         lines.push({ obj, msg });
       }) as never);
-    const info = spy('info'), warn = spy('warn');
+    const info = spy('info'),
+      warn = spy('warn');
     await request(app).post('/v1/auth/otp/send').send({ mobile: '9876543210' });
     await request(app).get('/v1/categories');
     info.mockRestore();

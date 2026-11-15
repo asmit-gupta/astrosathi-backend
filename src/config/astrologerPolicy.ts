@@ -20,7 +20,14 @@ export const astrologerPolicy = {
     { code: 'pa', nameEn: 'Punjabi', nameHi: 'पंजाबी', active: false },
   ],
   /** Capability flags (spec §7.10). Consult modes are the default; the rest need separate approval. */
-  capabilities: ['consult_chat', 'consult_voice', 'consult_video', 'host_live', 'recommend_items', 'write_reports'] as const,
+  capabilities: [
+    'consult_chat',
+    'consult_voice',
+    'consult_video',
+    'host_live',
+    'recommend_items',
+    'write_reports',
+  ] as const,
   /** Claims an astrologer may not make in their bio (spec §9.2 step 3). Checked automatically and by the admin. */
   bannedClaims: [
     /guarantee/i,
@@ -48,7 +55,10 @@ export const astrologerPolicy = {
       pan: { maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
       id_front: { maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
       id_back: { maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
-      experience_proof: { maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
+      experience_proof: {
+        maxBytes: 8 * 1024 * 1024,
+        types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+      },
       intro_video: { maxBytes: 80 * 1024 * 1024, types: ['video/mp4', 'video/quicktime', 'video/webm'] },
     },
   },

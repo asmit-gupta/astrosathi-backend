@@ -23,7 +23,13 @@ export class ApitxtSmsProvider implements SmsProvider {
   ) {}
 
   async sendOtp({ mobile, code, requestId }: SendOtpInput): Promise<SendOtpResult> {
-    const form = new URLSearchParams({ authkey: this.authKey, mobile: `91${mobile}`, otp: code, channel: 'sms', country: '91' });
+    const form = new URLSearchParams({
+      authkey: this.authKey,
+      mobile: `91${mobile}`,
+      otp: code,
+      channel: 'sms',
+      country: '91',
+    });
     if (this.templateId) form.set('template_id', this.templateId);
 
     const controller = new AbortController();

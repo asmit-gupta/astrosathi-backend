@@ -69,7 +69,9 @@ describe('admin login', () => {
     const wrongPassword = await request(app)
       .post('/admin/v1/auth/login')
       .send({ email: EMAIL, password: 'nope-nope-nope', code: t.nextCode() });
-    const wrongCode = await request(app).post('/admin/v1/auth/login').send({ email: EMAIL, password: PASSWORD, code: '000000' });
+    const wrongCode = await request(app)
+      .post('/admin/v1/auth/login')
+      .send({ email: EMAIL, password: PASSWORD, code: '000000' });
     const wrongEmail = await request(app)
       .post('/admin/v1/auth/login')
       .send({ email: 'x@example.com', password: PASSWORD, code: t.nextCode() });
@@ -91,7 +93,9 @@ describe('admin login', () => {
   it('locks an IP after 5 failures for 15 minutes', async () => {
     const t = await setup();
     for (let i = 0; i < 5; i++) {
-      await request(app).post('/admin/v1/auth/login').send({ email: EMAIL, password: 'wrong-wrong-wrong', code: '123456' });
+      await request(app)
+        .post('/admin/v1/auth/login')
+        .send({ email: EMAIL, password: 'wrong-wrong-wrong', code: '123456' });
     }
     const locked = await t.login();
     expect(locked.status).toBe(429);
@@ -107,7 +111,9 @@ describe('admin login', () => {
     const second = (await t.login()).body.token;
     const old = await request(app).get('/admin/v1/auth/session').set('Authorization', `Bearer ${first}`);
     expect(old.body.error.code).toBe('ADMIN_SESSION_INVALID');
-    expect((await request(app).get('/admin/v1/auth/session').set('Authorization', `Bearer ${second}`)).status).toBe(200);
+    expect((await request(app).get('/admin/v1/auth/session').set('Authorization', `Bearer ${second}`)).status).toBe(
+      200,
+    );
   });
 
   it('expires after 30 idle minutes', async () => {
@@ -147,7 +153,10 @@ describe('step-up', () => {
   it('changes the password with the current one', async () => {
     const t = await setup();
     const auth = { Authorization: `Bearer ${(await t.login()).body.token}` };
-    const short = await request(app).post('/admin/v1/auth/password').set(auth).send({ currentPassword: PASSWORD, newPassword: 'short' });
+    const short = await request(app)
+      .post('/admin/v1/auth/password')
+      .set(auth)
+      .send({ currentPassword: PASSWORD, newPassword: 'short' });
     expect(short.body.error.code).toBe('PASSWORD_TOO_SHORT');
     const ok = await request(app)
       .post('/admin/v1/auth/password')
@@ -180,7 +189,6 @@ describe('settings', () => {
       .send({ value: 10_000, reason: 'Raise minimum to ₹100' });
     expect(res.status).toBe(201);
     expect(await settings.get('topup_min_paise')).toBe(10_000);
-
   });
 
   it('schedules a future change that takes effect at its time, and can cancel it before', async () => {
@@ -227,11 +235,15 @@ describe('settings', () => {
     const { auth } = await signedIn();
     const put = (key: string, body: object) => request(app).put(`/admin/v1/settings/${key}`).set(auth).send(body);
 
-    expect((await put('platform_share_pct', { value: 140, reason: 'Typo test' })).body.error.code).toBe('SETTING_INVALID');
-    expect((await put('platform_share_pct', { value: '40', reason: 'Type test' })).body.error.code).toBe('SETTING_INVALID');
+    expect((await put('platform_share_pct', { value: 140, reason: 'Typo test' })).body.error.code).toBe(
+      'SETTING_INVALID',
+    );
+    expect((await put('platform_share_pct', { value: '40', reason: 'Type test' })).body.error.code).toBe(
+      'SETTING_INVALID',
+    );
     expect(
-      (await put('platform_share_pct', { value: 39, effectiveFrom: '2026-11-01T00:00:00Z', reason: 'Backdate test' })).body
-        .error.code,
+      (await put('platform_share_pct', { value: 39, effectiveFrom: '2026-11-01T00:00:00Z', reason: 'Backdate test' }))
+        .body.error.code,
     ).toBe('SETTING_BACKDATED');
     expect((await put('no_such_key', { value: 1, reason: 'Unknown key' })).status).toBe(404);
     expect((await put('platform_share_pct', { value: 39 })).body.error.code).toBe('VALIDATION_FAILED');
@@ -247,7 +259,9 @@ describe('audit log', () => {
 
   it('cannot be edited or deleted, even directly in the database', async () => {
     const row = await prisma.auditLog.create({ data: { actorType: 'system', action: 'test', createdAt: new Date() } });
-    await expect(prisma.auditLog.update({ where: { id: row.id }, data: { action: 'tampered' } })).rejects.toThrow(/append-only/);
+    await expect(prisma.auditLog.update({ where: { id: row.id }, data: { action: 'tampered' } })).rejects.toThrow(
+      /append-only/,
+    );
     await expect(prisma.auditLog.delete({ where: { id: row.id } })).rejects.toThrow(/append-only/);
   });
 });
@@ -274,13 +288,18 @@ describe('admin client IP from the panel', () => {
   const SECRET = 'test-admin-panel-secret-0123456789abcdef';
   const failedLoginIp = async (headers: Record<string, string>) => {
     await setup();
-    await request(app).post('/admin/v1/auth/login').set(headers).send({ email: EMAIL, password: 'wrong-wrong-wrong', code: '123456' });
+    await request(app)
+      .post('/admin/v1/auth/login')
+      .set(headers)
+      .send({ email: EMAIL, password: 'wrong-wrong-wrong', code: '123456' });
     const row = await prisma.adminLoginAttempt.findFirstOrThrow({ where: { success: false } });
     return row.ip;
   };
 
   it('uses the forwarded IP when the panel presents the shared secret', async () => {
-    expect(await failedLoginIp({ 'X-Admin-Panel-Secret': SECRET, 'X-Admin-Client-Ip': '203.0.113.9' })).toBe('203.0.113.9');
+    expect(await failedLoginIp({ 'X-Admin-Panel-Secret': SECRET, 'X-Admin-Client-Ip': '203.0.113.9' })).toBe(
+      '203.0.113.9',
+    );
   });
 
   it('ignores the header without the secret', async () => {
@@ -288,23 +307,35 @@ describe('admin client IP from the panel', () => {
   });
 
   it('ignores the header with a wrong secret', async () => {
-    expect(await failedLoginIp({ 'X-Admin-Panel-Secret': 'wrong', 'X-Admin-Client-Ip': '203.0.113.9' })).not.toBe('203.0.113.9');
+    expect(await failedLoginIp({ 'X-Admin-Panel-Secret': 'wrong', 'X-Admin-Client-Ip': '203.0.113.9' })).not.toBe(
+      '203.0.113.9',
+    );
   });
 
   it('ignores a forwarded value that is not an IP', async () => {
-    expect(await failedLoginIp({ 'X-Admin-Panel-Secret': SECRET, 'X-Admin-Client-Ip': 'not-an-ip' })).not.toBe('not-an-ip');
+    expect(await failedLoginIp({ 'X-Admin-Panel-Secret': SECRET, 'X-Admin-Client-Ip': 'not-an-ip' })).not.toBe(
+      'not-an-ip',
+    );
   });
 
-  it('locks out by the real client IP, so one admin\'s typos do not lock the panel for everyone', async () => {
+  it("locks out by the real client IP, so one admin's typos do not lock the panel for everyone", async () => {
     const t = await setup();
     const from = (ip: string) => ({ 'X-Admin-Panel-Secret': SECRET, 'X-Admin-Client-Ip': ip });
     for (let i = 0; i < 5; i++) {
-      await request(app).post('/admin/v1/auth/login').set(from('198.51.100.1')).send({ email: EMAIL, password: 'wrong-wrong-wrong', code: '123456' });
+      await request(app)
+        .post('/admin/v1/auth/login')
+        .set(from('198.51.100.1'))
+        .send({ email: EMAIL, password: 'wrong-wrong-wrong', code: '123456' });
     }
-    const locked = await request(app).post('/admin/v1/auth/login').set(from('198.51.100.1')).send({ email: EMAIL, password: PASSWORD, code: t.nextCode() });
+    const locked = await request(app)
+      .post('/admin/v1/auth/login')
+      .set(from('198.51.100.1'))
+      .send({ email: EMAIL, password: PASSWORD, code: t.nextCode() });
     expect(locked.body.error.code).toBe('ADMIN_LOGIN_LOCKED');
-    const other = await request(app).post('/admin/v1/auth/login').set(from('198.51.100.2')).send({ email: EMAIL, password: PASSWORD, code: t.nextCode() });
+    const other = await request(app)
+      .post('/admin/v1/auth/login')
+      .set(from('198.51.100.2'))
+      .send({ email: EMAIL, password: PASSWORD, code: t.nextCode() });
     expect(other.status).toBe(200);
   });
 });
-

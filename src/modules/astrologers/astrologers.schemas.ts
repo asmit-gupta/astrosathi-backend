@@ -1,20 +1,14 @@
 import { z } from 'zod';
 import { activeLanguageCodes, astrologerPolicy } from '../../config/astrologerPolicy';
+import { personName } from '../../lib/validation';
 
 const p = astrologerPolicy;
 const uuid = z.string().uuid();
-const name = (max: number) =>
-  z
-    .string()
-    .trim()
-    .min(2)
-    .max(max)
-    .regex(/^[\p{L}\p{M}\s.'-]+$/u, 'only letters, spaces and . \' -');
 
 // Step 1 · Basics (X1-1)
 export const basicsBody = z.object({
-  legalName: name(100),
-  displayName: name(p.displayName.max),
+  legalName: personName(100),
+  displayName: personName(p.displayName.max),
   gender: z.enum(['female', 'male', 'other']),
   placeId: z.number().int().positive(),
   languages: z
@@ -116,7 +110,7 @@ export const availabilityBody = z.object({
 
 export const revisionBody = z
   .object({
-    displayName: name(p.displayName.max).optional(),
+    displayName: personName(p.displayName.max).optional(),
     bio: z.string().trim().min(p.bio.min).max(p.bio.max).optional(),
     photoUploadId: uuid.optional(),
     languages: basicsBody.shape.languages.optional(),
@@ -128,7 +122,9 @@ export const rateChangeBody = z.object({ mode: z.enum(['chat', 'voice', 'video']
 
 // Admin (Y2)
 export const listQuery = z.object({
-  status: z.enum(['draft', 'submitted', 'needs_changes', 'interview_scheduled', 'approved', 'rejected', 'suspended']).optional(),
+  status: z
+    .enum(['draft', 'submitted', 'needs_changes', 'interview_scheduled', 'approved', 'rejected', 'suspended'])
+    .optional(),
   q: z.string().trim().max(60).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),

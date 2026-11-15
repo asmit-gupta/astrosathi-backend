@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { decryptPhone, maskPhone } from '../../lib/phone';
 import { notFound } from '../../lib/errors';
 import { prisma } from '../../lib/prisma';
-import { requireAuth } from '../../middleware/auth';
+import { authOf, requireAuth } from '../../middleware/auth';
 import { validateBody } from '../../middleware/validate';
 import * as birthProfiles from './birthProfiles.service';
 import * as preferences from './preferences.service';
@@ -20,7 +20,7 @@ import {
 export const meRouter = Router();
 meRouter.use(requireAuth);
 
-const uid = (req: { auth?: { userId: string } }) => req.auth!.userId;
+const uid = (req: Request) => authOf(req).userId;
 
 async function meView(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });

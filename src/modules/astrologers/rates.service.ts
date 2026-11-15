@@ -39,7 +39,10 @@ export async function currentRatesMany(ids: string[]): Promise<Map<string, RateM
 
 /** The new-astrologer cap (handoff D9) if it applies to this astrologer now; null once the cap period is over. */
 export async function rateCap(a: Pick<Astrologer, 'approvedAt'>): Promise<number | null> {
-  const [cap, days] = await Promise.all([settings.get('new_astrologer_rate_cap_paise'), settings.get('new_astrologer_cap_days')]);
+  const [cap, days] = await Promise.all([
+    settings.get('new_astrologer_rate_cap_paise'),
+    settings.get('new_astrologer_cap_days'),
+  ]);
   if (!a.approvedAt) return cap; // not approved yet: the cap applies from day one
   const ends = a.approvedAt.getTime() + days * 86_400_000;
   return clock.now().getTime() < ends ? cap : null;

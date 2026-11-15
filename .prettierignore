@@ -1,0 +1,6 @@
+dist
+node_modules
+coverage
+prisma/migrations
+prisma/seed-data
+package-lock.json

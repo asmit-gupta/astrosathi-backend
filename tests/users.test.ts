@@ -11,7 +11,11 @@ async function signedIn() {
   return {
     userId: user.id,
     get: (path: string) => request(app).get(path).set(auth),
-    post: (path: string, body?: object) => request(app).post(path).set(auth).send(body ?? {}),
+    post: (path: string, body?: object) =>
+      request(app)
+        .post(path)
+        .set(auth)
+        .send(body ?? {}),
     put: (path: string, body: object) => request(app).put(path).set(auth).send(body),
     patch: (path: string, body: object) => request(app).patch(path).set(auth).send(body),
     del: (path: string) => request(app).delete(path).set(auth),

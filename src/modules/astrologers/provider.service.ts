@@ -13,8 +13,10 @@ import { onlineModes, statusWord } from './views';
 async function approvedAstrologer(userId: string): Promise<Astrologer> {
   const a = await prisma.astrologer.findUnique({ where: { userId } });
   if (!a) throw new AppError(404, 'NOT_AN_ASTROLOGER', 'No astrologer profile for this account.');
-  if (a.status === 'suspended') throw new AppError(403, 'ASTROLOGER_SUSPENDED', 'Your profile is on hold.', { reason: a.suspendReason });
-  if (a.status !== 'approved') throw new AppError(409, 'NOT_APPROVED_YET', 'Your application has not been approved yet.');
+  if (a.status === 'suspended')
+    throw new AppError(403, 'ASTROLOGER_SUSPENDED', 'Your profile is on hold.', { reason: a.suspendReason });
+  if (a.status !== 'approved')
+    throw new AppError(409, 'NOT_APPROVED_YET', 'Your application has not been approved yet.');
   return a;
 }
 
@@ -25,7 +27,10 @@ export async function home(userId: string) {
     prisma.astrologerAvailability.findUnique({ where: { astrologerId: a.id } }),
     currentRates(prisma, a.id),
     prisma.astrologerRate.findMany({
-      where: { astrologerId: a.id, OR: [{ status: 'requested' }, { status: 'approved', effectiveFrom: { gt: clock.now() } }] },
+      where: {
+        astrologerId: a.id,
+        OR: [{ status: 'requested' }, { status: 'approved', effectiveFrom: { gt: clock.now() } }],
+      },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.profileRevision.findFirst({ where: { astrologerId: a.id, status: 'pending' } }),
@@ -56,7 +61,10 @@ export async function home(userId: string) {
 }
 
 /** X2-1: one switch per mode; only granted modes with a rate can go on. "Away for a bit" pauses all. */
-export async function setAvailability(userId: string, b: { chat?: boolean; voice?: boolean; video?: boolean; awayMinutes?: number | null }) {
+export async function setAvailability(
+  userId: string,
+  b: { chat?: boolean; voice?: boolean; video?: boolean; awayMinutes?: number | null },
+) {
   const a = await approvedAstrologer(userId);
   const rates = await currentRates(prisma, a.id);
   const now = clock.now();
@@ -84,7 +92,8 @@ export async function setAvailability(userId: string, b: { chat?: boolean; voice
  */
 export async function requestRateChange(userId: string, mode: ConsultMode, ratePaise: number) {
   const a = await approvedAstrologer(userId);
-  if (!a.capabilities.includes(`consult_${mode}`)) throw new AppError(403, 'MODE_NOT_ENABLED', `${mode} consults are not enabled for you.`);
+  if (!a.capabilities.includes(`consult_${mode}`))
+    throw new AppError(403, 'MODE_NOT_ENABLED', `${mode} consults are not enabled for you.`);
   await assertRateAllowed(a, mode, ratePaise);
   const current = (await currentRates(prisma, a.id))[mode];
   if (current === ratePaise) throw badRequest('RATE_UNCHANGED', 'That is already your rate.');
@@ -93,12 +102,17 @@ export async function requestRateChange(userId: string, mode: ConsultMode, rateP
   const reviewPct = await settings.get('rate_rise_review_pct');
   const rise = current ? ((ratePaise - current) / current) * 100 : 0;
   const needsReview = current !== undefined && rise > reviewPct;
-  const effectiveFrom = current === undefined || ratePaise < current ? now : addSeconds(now, astrologerPolicy.rateChangeDelayHours * 3600);
+  const effectiveFrom =
+    current === undefined || ratePaise < current ? now : addSeconds(now, astrologerPolicy.rateChangeDelayHours * 3600);
 
   await prisma.$transaction(async (tx) => {
     // A new ask replaces any pending or scheduled change for this mode.
     await tx.astrologerRate.updateMany({
-      where: { astrologerId: a.id, mode, OR: [{ status: 'requested' }, { status: 'approved', effectiveFrom: { gt: now } }] },
+      where: {
+        astrologerId: a.id,
+        mode,
+        OR: [{ status: 'requested' }, { status: 'approved', effectiveFrom: { gt: now } }],
+      },
       data: { status: 'cancelled', decidedAt: now },
     });
     await tx.astrologerRate.create({
@@ -113,7 +127,11 @@ export async function requestRateChange(userId: string, mode: ConsultMode, rateP
       },
     });
   });
-  return { result: needsReview ? 'in_review' : effectiveFrom > now ? 'scheduled' : 'applied', effectiveFrom: needsReview ? null : effectiveFrom, home: await home(userId) };
+  return {
+    result: needsReview ? 'in_review' : effectiveFrom > now ? 'scheduled' : 'applied',
+    effectiveFrom: needsReview ? null : effectiveFrom,
+    home: await home(userId),
+  };
 }
 
 /** Profile edits (X4-2): checked now, applied after the admin approves; the live profile stays meanwhile. */
@@ -127,9 +145,13 @@ export async function requestRevision(userId: string, b: RevisionInput) {
     if (b.methods) await assertTopicsAndMethods(tx, [], b.methods);
   });
   if (b.bio && bioProblems(b.bio).length) {
-    throw badRequest('BIO_NOT_ALLOWED', 'Your bio has words we cannot allow (guarantees, cures, contact details or links).', {
-      matches: bioProblems(b.bio),
-    });
+    throw badRequest(
+      'BIO_NOT_ALLOWED',
+      'Your bio has words we cannot allow (guarantees, cures, contact details or links).',
+      {
+        matches: bioProblems(b.bio),
+      },
+    );
   }
   await prisma.profileRevision.create({ data: { astrologerId: a.id, changes: b, createdAt: clock.now() } });
   return { inReview: true };

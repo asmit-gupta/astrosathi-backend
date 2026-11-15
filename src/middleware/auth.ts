@@ -1,5 +1,6 @@
 import type { AuthApp } from '@prisma/client';
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler } from 'express';
+import type { AuthContext } from '../types/express';
 import { forbidden, unauthorized } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 import { verifyAccessToken } from '../modules/auth/token.service';
@@ -28,6 +29,12 @@ const authFor =
     req.auth = { userId: claims.sub, sessionId: claims.sid, roles: claims.roles, app: session.app };
     next();
   };
+
+/** The signed-in caller. Only valid on routes behind one of the auth guards below. */
+export function authOf(req: Request): AuthContext {
+  if (!req.auth) throw unauthorized();
+  return req.auth;
+}
 
 /** User-app routes (/v1/me). */
 export const requireAuth = authFor('user');

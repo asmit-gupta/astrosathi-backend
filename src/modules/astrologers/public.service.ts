@@ -47,15 +47,16 @@ export async function list(q: ListQuery) {
   const photoKey = (id: string | null) => photos.find((p) => p.id === id)?.storageKey ?? null;
 
   let cards = await Promise.all(rows.map((r) => publicCard(r, rates.get(r.id) ?? {}, photoKey(r.photoUploadId))));
-  if (q.mode) cards = cards.filter((c) => c.modes.includes(q.mode!));
+  const { mode, minRatePaise, maxRatePaise } = q;
+  if (mode) cards = cards.filter((c) => c.modes.includes(mode));
   if (q.online) cards = cards.filter((c) => c.status === 'online');
 
   const price = (c: (typeof cards)[number]) => (q.mode ? c.rates[q.mode] : c.fromRatePaise) ?? Number.MAX_SAFE_INTEGER;
   // Live min and max for the price slider, before the price filter applies (W2-3 note 1).
   const prices = cards.map(price).filter((p) => p !== Number.MAX_SAFE_INTEGER);
   const priceRange = prices.length ? { minPaise: Math.min(...prices), maxPaise: Math.max(...prices) } : null;
-  if (q.minRatePaise !== undefined) cards = cards.filter((c) => price(c) >= q.minRatePaise!);
-  if (q.maxRatePaise !== undefined) cards = cards.filter((c) => price(c) <= q.maxRatePaise!);
+  if (minRatePaise !== undefined) cards = cards.filter((c) => price(c) >= minRatePaise);
+  if (maxRatePaise !== undefined) cards = cards.filter((c) => price(c) <= maxRatePaise);
   cards.sort((a, b) => {
     switch (q.sort) {
       case 'price_asc':
@@ -65,7 +66,10 @@ export async function list(q: ListQuery) {
       case 'experience':
         return (b.experienceYears ?? 0) - (a.experienceYears ?? 0);
       default:
-        return (a.status === 'online' ? 0 : 1) - (b.status === 'online' ? 0 : 1) || (b.experienceYears ?? 0) - (a.experienceYears ?? 0);
+        return (
+          (a.status === 'online' ? 0 : 1) - (b.status === 'online' ? 0 : 1) ||
+          (b.experienceYears ?? 0) - (a.experienceYears ?? 0)
+        );
     }
   });
   return { items: cards.slice(q.offset, q.offset + q.limit), total: cards.length, priceRange };
@@ -77,7 +81,10 @@ export async function get(id: string) {
   if (!a) return null;
   const rates = (await currentRatesMany([a.id])).get(a.id) ?? {};
   const docIds = [a.photoUploadId, a.panUploadId, a.idFrontUploadId, a.proofUploadId].filter((x): x is string => !!x);
-  const docs = await prisma.upload.findMany({ where: { id: { in: docIds } }, select: { id: true, storageKey: true, review: true, purpose: true } });
+  const docs = await prisma.upload.findMany({
+    where: { id: { in: docIds } },
+    select: { id: true, storageKey: true, review: true, purpose: true },
+  });
   const card = await publicCard(a, rates, docs.find((d) => d.id === a.photoUploadId)?.storageKey ?? null);
   const verified = (purpose: string) => docs.some((d) => d.purpose === purpose && d.review === 'verified');
   const methodTags = await prisma.methodTag.findMany({ where: { slug: { in: a.methods } } });

@@ -10,7 +10,12 @@ class FakeStorage implements StorageProvider {
   readonly name = 'fake';
   objects = new Map<string, { sizeBytes: number; contentType: string }>();
   async createUploadLink(key: string, contentType: string, sizeBytes: number) {
-    return { url: `https://fake.storage/${key}`, method: 'PUT' as const, headers: { 'Content-Type': contentType, 'Content-Length': String(sizeBytes) }, expiresAt: new Date() };
+    return {
+      url: `https://fake.storage/${key}`,
+      method: 'PUT' as const,
+      headers: { 'Content-Type': contentType, 'Content-Length': String(sizeBytes) },
+      expiresAt: new Date(),
+    };
   }
   async createViewLink(key: string) {
     return `https://fake.storage/view/${key}`;
@@ -61,10 +66,10 @@ const as = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 async function upload(token: string, purpose: string, contentType = 'image/jpeg', sizeBytes = 120_000) {
   const res = await request(app).post('/v1/provider/uploads').set(as(token)).send({ purpose, contentType, sizeBytes });
-  expect(res.status).toBe(201);
+  expect(res.status, JSON.stringify(res.body)).toBe(201);
   files.put(res.body.upload.url, sizeBytes, contentType);
   const done = await request(app).post(`/v1/provider/uploads/${res.body.uploadId}/complete`).set(as(token));
-  expect(done.status).toBe(200);
+  expect(done.status, JSON.stringify(done.body)).toBe(200);
   return res.body.uploadId as string;
 }
 
@@ -77,7 +82,8 @@ const BIO = 'Fifteen years of Vedic astrology. I explain timing windows and tend
 /** Fills all five steps. Returns the uploaded document ids. */
 async function fillApplication(token: string, rates: Record<string, number> = { chat: 3000, voice: 4000 }) {
   const photo = await upload(token, 'photo');
-  const put = (step: string, body: object) => request(app).put(`/v1/provider/application/${step}`).set(as(token)).send(body);
+  const put = (step: string, body: object) =>
+    request(app).put(`/v1/provider/application/${step}`).set(as(token)).send(body);
   expect(
     (
       await put('basics', {
@@ -119,13 +125,18 @@ async function fillApplication(token: string, rates: Record<string, number> = { 
       })
     ).status,
   ).toBe(200);
-  expect((await put('payout', { pan: 'abcde1234f', bankAccount: '123456789012', ifsc: 'hdfc0001234' })).status).toBe(200);
+  expect((await put('payout', { pan: 'abcde1234f', bankAccount: '123456789012', ifsc: 'hdfc0001234' })).status).toBe(
+    200,
+  );
   expect((await put('rates', rates)).status).toBe(200);
   return { photo, ...docs };
 }
 
 const submit = (token: string) =>
-  request(app).post('/v1/provider/application/submit').set(as(token)).send({ agreements: { conduct: true, terms: true } });
+  request(app)
+    .post('/v1/provider/application/submit')
+    .set(as(token))
+    .send({ agreements: { conduct: true, terms: true } });
 
 const APPROVE = {
   primaryCategory: 'career-job',
@@ -143,7 +154,10 @@ async function approvedAstrologer() {
   const admin = await adminToken();
   const { id } = (await request(app).get('/v1/provider/application').set(as(token))).body;
   for (const doc of [docs.photo, docs.pan, docs.idFront, docs.idBack, docs.video]) {
-    await request(app).post(`/admin/v1/astrologers/${id}/documents/${doc}/review`).set(as(admin)).send({ status: 'verified' });
+    await request(app)
+      .post(`/admin/v1/astrologers/${id}/documents/${doc}/review`)
+      .set(as(admin))
+      .send({ status: 'verified' });
   }
   const res = await request(app).post(`/admin/v1/astrologers/${id}/approve`).set(as(admin)).send(APPROVE);
   expect(res.status).toBe(200);
@@ -169,11 +183,18 @@ describe('uploads', () => {
   it('limits type and size, and only completes once the file is in storage', async () => {
     const t = await providerLogin();
     const send = (body: object) => request(app).post('/v1/provider/uploads').set(as(t)).send(body);
-    expect((await send({ purpose: 'photo', contentType: 'application/pdf', sizeBytes: 1000 })).body.error.code).toBe('UPLOAD_TYPE_NOT_ALLOWED');
-    expect((await send({ purpose: 'photo', contentType: 'image/jpeg', sizeBytes: 50_000_000 })).body.error.code).toBe('UPLOAD_TOO_LARGE');
+    expect((await send({ purpose: 'photo', contentType: 'application/pdf', sizeBytes: 1000 })).body.error.code).toBe(
+      'UPLOAD_TYPE_NOT_ALLOWED',
+    );
+    expect((await send({ purpose: 'photo', contentType: 'image/jpeg', sizeBytes: 50_000_000 })).body.error.code).toBe(
+      'UPLOAD_TOO_LARGE',
+    );
 
     const res = await send({ purpose: 'photo', contentType: 'image/jpeg', sizeBytes: 1000 });
-    expect(res.body.upload).toMatchObject({ method: 'PUT', headers: { 'Content-Type': 'image/jpeg', 'Content-Length': '1000' } });
+    expect(res.body.upload).toMatchObject({
+      method: 'PUT',
+      headers: { 'Content-Type': 'image/jpeg', 'Content-Length': '1000' },
+    });
     const complete = () => request(app).post(`/v1/provider/uploads/${res.body.uploadId}/complete`).set(as(t));
     expect((await complete()).body.error.code).toBe('UPLOAD_MISSING');
     files.put(res.body.upload.url, 999, 'image/jpeg');
@@ -191,14 +212,30 @@ describe('uploads', () => {
       request(app)
         .put('/v1/provider/application/basics')
         .set(as(t))
-        .send({ legalName: 'Mohan Sharma', displayName: 'Mohan', gender: 'male', placeId: 1259229, languages: ['hi'], experienceYears: 5, photoUploadId });
+        .send({
+          legalName: 'Mohan Sharma',
+          displayName: 'Mohan',
+          gender: 'male',
+          placeId: 1259229,
+          languages: ['hi'],
+          experienceYears: 5,
+          photoUploadId,
+        });
     await prisma.place.findFirstOrThrow();
     const p = await placeId();
     const withPlace = (photoUploadId: string) =>
       request(app)
         .put('/v1/provider/application/basics')
         .set(as(t))
-        .send({ legalName: 'Mohan Sharma', displayName: 'Mohan', gender: 'male', placeId: p, languages: ['hi'], experienceYears: 5, photoUploadId });
+        .send({
+          legalName: 'Mohan Sharma',
+          displayName: 'Mohan',
+          gender: 'male',
+          placeId: p,
+          languages: ['hi'],
+          experienceYears: 5,
+          photoUploadId,
+        });
     void basics;
     expect((await withPlace(theirs)).body.error.code).toBe('UPLOAD_INVALID');
     expect((await withPlace(pan)).body.error.code).toBe('UPLOAD_INVALID');
@@ -208,19 +245,27 @@ describe('uploads', () => {
 describe('application', () => {
   it('enforces the rules: topics, bio claims, the new-astrologer rate cap, completeness', async () => {
     const t = await providerLogin();
-    const put = (step: string, body: object) => request(app).put(`/v1/provider/application/${step}`).set(as(t)).send(body);
+    const put = (step: string, body: object) =>
+      request(app).put(`/v1/provider/application/${step}`).set(as(t)).send(body);
     const expertise = { methods: ['vedic'], primaryCategory: 'career-job', capabilities: ['consult_chat'], bio: BIO };
 
     expect((await put('expertise', { ...expertise, primaryCategory: 'health' })).body.error.code).toBe('UNKNOWN_TOPIC');
     expect((await put('expertise', { ...expertise, methods: ['black-magic'] })).body.error.code).toBe('UNKNOWN_METHOD');
-    expect((await put('expertise', { ...expertise, capabilities: ['host_live'] })).body.error.code).toBe('VALIDATION_FAILED');
-    const claim = await put('expertise', { ...expertise, bio: `${BIO} 100% guaranteed results, call me on 98765 43210.` });
+    expect((await put('expertise', { ...expertise, capabilities: ['host_live'] })).body.error.code).toBe(
+      'VALIDATION_FAILED',
+    );
+    const claim = await put('expertise', {
+      ...expertise,
+      bio: `${BIO} 100% guaranteed results, call me on 98765 43210.`,
+    });
     expect(claim.body.error.code).toBe('BIO_NOT_ALLOWED');
     expect((await put('expertise', expertise)).status).toBe(200);
 
     expect((await put('rates', { chat: 6000 })).body.error.code).toBe('RATE_ABOVE_CAP');
     expect((await put('rates', { chat: 100 })).body.error.code).toBe('RATE_TOO_LOW');
-    expect((await put('payout', { pan: 'ABC', bankAccount: '12', ifsc: 'x' })).body.error.code).toBe('VALIDATION_FAILED');
+    expect((await put('payout', { pan: 'ABC', bankAccount: '12', ifsc: 'x' })).body.error.code).toBe(
+      'VALIDATION_FAILED',
+    );
 
     const res = await submit(t);
     expect(res.body.error.code).toBe('APPLICATION_INCOMPLETE');
@@ -230,7 +275,10 @@ describe('application', () => {
   it('submits once complete, records the agreements and locks editing', async () => {
     const t = await providerLogin();
     await fillApplication(t);
-    const noTerms = await request(app).post('/v1/provider/application/submit').set(as(t)).send({ agreements: { conduct: true } });
+    const noTerms = await request(app)
+      .post('/v1/provider/application/submit')
+      .set(as(t))
+      .send({ agreements: { conduct: true } });
     expect(noTerms.body.error.code).toBe('VALIDATION_FAILED');
 
     const res = await submit(t);
@@ -239,7 +287,9 @@ describe('application', () => {
     expect(res.body.timeline.steps[0].doneAt).toBeTruthy();
     expect(res.body.payout).toMatchObject({ panLast4: '234F', bankAccountLast4: '9012', ifsc: 'HDFC0001234' });
     expect(JSON.stringify(res.body)).not.toContain('ABCDE1234F');
-    const consents = await prisma.consent.findMany({ where: { docType: { in: ['provider_conduct', 'provider_terms'] } } });
+    const consents = await prisma.consent.findMany({
+      where: { docType: { in: ['provider_conduct', 'provider_terms'] } },
+    });
     expect(consents).toHaveLength(2);
 
     const edit = await request(app).put('/v1/provider/application/rates').set(as(t)).send({ chat: 2000 });
@@ -269,7 +319,9 @@ describe('admin review', () => {
 
     const detail = await request(app).get(`/admin/v1/astrologers/${id}`).set(as(stale));
     expect(detail.body.payout.panLast4).toBe('234F');
-    expect(detail.body.documentFiles.every((d: { url: string }) => d.url.startsWith('https://fake.storage/view/'))).toBe(true);
+    expect(
+      detail.body.documentFiles.every((d: { url: string }) => d.url.startsWith('https://fake.storage/view/')),
+    ).toBe(true);
     expect(JSON.stringify(detail.body)).not.toContain('123456789012');
 
     const blocked = await request(app).post(`/admin/v1/astrologers/${id}/kyc/reveal`).set(as(stale));
@@ -287,9 +339,9 @@ describe('admin review', () => {
     const { id } = (await request(app).get('/v1/provider/application').set(as(t))).body;
 
     // Approval is refused until documents are verified and both checks are ticked.
-    expect((await request(app).post(`/admin/v1/astrologers/${id}/approve`).set(as(admin)).send(APPROVE)).body.error.code).toBe(
-      'DOCUMENTS_NOT_VERIFIED',
-    );
+    expect(
+      (await request(app).post(`/admin/v1/astrologers/${id}/approve`).set(as(admin)).send(APPROVE)).body.error.code,
+    ).toBe('DOCUMENTS_NOT_VERIFIED');
 
     const rejectDoc = await request(app)
       .post(`/admin/v1/astrologers/${id}/documents/${docs.pan}/review`)
@@ -307,16 +359,22 @@ describe('admin review', () => {
     expect(seen.documents.pan).toMatchObject({ review: 'rejected', reviewNote: 'PAN photo is blurry' });
 
     const newPan = await upload(t, 'pan');
-    await request(app)
-      .put('/v1/provider/application/documents')
-      .set(as(t))
-      .send({ panUploadId: newPan, idType: 'aadhaar', idFrontUploadId: docs.idFront, idBackUploadId: docs.idBack, introVideoUploadId: docs.video });
+    await request(app).put('/v1/provider/application/documents').set(as(t)).send({
+      panUploadId: newPan,
+      idType: 'aadhaar',
+      idFrontUploadId: docs.idFront,
+      idBackUploadId: docs.idBack,
+      introVideoUploadId: docs.video,
+    });
     const resubmitted = await submit(t);
     expect(resubmitted.body.status).toBe('submitted');
     expect(resubmitted.body.fixes).toHaveLength(0);
 
     for (const doc of [docs.photo, newPan, docs.idFront, docs.idBack, docs.video]) {
-      await request(app).post(`/admin/v1/astrologers/${id}/documents/${doc}/review`).set(as(admin)).send({ status: 'verified' });
+      await request(app)
+        .post(`/admin/v1/astrologers/${id}/documents/${doc}/review`)
+        .set(as(admin))
+        .send({ status: 'verified' });
     }
     const afterDocs = (await request(app).get('/v1/provider/application').set(as(t))).body;
     expect(afterDocs.timeline.steps[1].doneAt).toBeTruthy();
@@ -339,7 +397,11 @@ describe('admin review', () => {
     expect(overCap.body.error.code).toBe('RATE_ABOVE_CAP');
 
     const approved = await request(app).post(`/admin/v1/astrologers/${id}/approve`).set(as(admin)).send(APPROVE);
-    expect(approved.body).toMatchObject({ status: 'approved', listed: true, capabilities: ['consult_chat', 'consult_voice'] });
+    expect(approved.body).toMatchObject({
+      status: 'approved',
+      listed: true,
+      capabilities: ['consult_chat', 'consult_voice'],
+    });
     const user = await prisma.user.findFirstOrThrow({ where: { phoneLast4: '0001' } });
     expect(user.roles).toContain('astrologer');
   });
@@ -350,9 +412,14 @@ describe('admin review', () => {
     await submit(t);
     const admin = await adminToken();
     const { id } = (await request(app).get('/v1/provider/application').set(as(t))).body;
-    const res = await request(app).post(`/admin/v1/astrologers/${id}/reject`).set(as(admin)).send({ reason: 'Could not verify the ID' });
+    const res = await request(app)
+      .post(`/admin/v1/astrologers/${id}/reject`)
+      .set(as(admin))
+      .send({ reason: 'Could not verify the ID' });
     expect(res.body.rejection.reason).toBe('Could not verify the ID');
-    expect((await request(app).post('/v1/provider/application/reapply').set(as(t))).body.error.code).toBe('REAPPLY_TOO_SOON');
+    expect((await request(app).post('/v1/provider/application/reapply').set(as(t))).body.error.code).toBe(
+      'REAPPLY_TOO_SOON',
+    );
     advance(31 * 86_400);
     const again = await providerLogin(); // the 15-minute access token expired meanwhile
     expect((await request(app).post('/v1/provider/application/reapply').set(as(again))).body.status).toBe('draft');
@@ -367,7 +434,13 @@ describe('after approval', () => {
 
     const list = await request(app).get('/v1/astrologers');
     expect(list.body.total).toBe(1);
-    expect(list.body.items[0]).toMatchObject({ id, displayName: 'Pt. Mohan Sharma', status: 'offline', fromRatePaise: 3000, modes: ['chat', 'voice'] });
+    expect(list.body.items[0]).toMatchObject({
+      id,
+      displayName: 'Pt. Mohan Sharma',
+      status: 'offline',
+      fromRatePaise: 3000,
+      modes: ['chat', 'voice'],
+    });
     expect((await request(app).get('/v1/astrologers?category=career-job')).body.total).toBe(1);
     expect((await request(app).get('/v1/astrologers?category=love-relationships')).body.total).toBe(0);
     expect((await request(app).get('/v1/astrologers?mode=video')).body.total).toBe(0);
@@ -402,7 +475,8 @@ describe('after approval', () => {
   it('rate changes: cuts apply now, small rises after 24 hours, big rises wait for the admin', async () => {
     let { token } = await approvedAstrologer();
     advance(1);
-    const change = (mode: string, ratePaise: number) => request(app).post('/v1/provider/rates').set(as(token)).send({ mode, ratePaise });
+    const change = (mode: string, ratePaise: number) =>
+      request(app).post('/v1/provider/rates').set(as(token)).send({ mode, ratePaise });
     const chatRate = async () => (await request(app).get('/v1/provider/home').set(as(token))).body.modes[0].ratePaise;
 
     expect((await change('chat', 2500)).body.result).toBe('applied');
@@ -420,7 +494,10 @@ describe('after approval', () => {
     const admin = await adminToken();
     const pending = await request(app).get('/admin/v1/astrologer-rate-requests').set(as(admin));
     expect(pending.body.items).toHaveLength(1);
-    await request(app).post(`/admin/v1/astrologer-rate-requests/${pending.body.items[0].id}/decide`).set(as(admin)).send({ approve: true });
+    await request(app)
+      .post(`/admin/v1/astrologer-rate-requests/${pending.body.items[0].id}/decide`)
+      .set(as(admin))
+      .send({ approve: true });
     expect(await chatRate()).toBe(2800);
     advance(24 * 3600 + 1);
     token = await providerLogin();
@@ -429,20 +506,31 @@ describe('after approval', () => {
 
   it('profile edits wait for review while the live profile stays', async () => {
     const { token, admin, id } = await approvedAstrologer();
-    const edit = await request(app).post('/v1/provider/profile/revisions').set(as(token)).send({ displayName: 'Acharya Mohan' });
+    const edit = await request(app)
+      .post('/v1/provider/profile/revisions')
+      .set(as(token))
+      .send({ displayName: 'Acharya Mohan' });
     expect(edit.status).toBe(202);
-    expect((await request(app).post('/v1/provider/profile/revisions').set(as(token)).send({ bio: BIO })).body.error.code).toBe('REVISION_PENDING');
+    expect(
+      (await request(app).post('/v1/provider/profile/revisions').set(as(token)).send({ bio: BIO })).body.error.code,
+    ).toBe('REVISION_PENDING');
     expect((await request(app).get(`/v1/astrologers/${id}`)).body.displayName).toBe('Pt. Mohan Sharma');
 
     const pending = await request(app).get('/admin/v1/astrologer-revisions').set(as(admin));
-    await request(app).post(`/admin/v1/astrologer-revisions/${pending.body.items[0].id}/decide`).set(as(admin)).send({ approve: true });
+    await request(app)
+      .post(`/admin/v1/astrologer-revisions/${pending.body.items[0].id}/decide`)
+      .set(as(admin))
+      .send({ approve: true });
     expect((await request(app).get(`/v1/astrologers/${id}`)).body.displayName).toBe('Acharya Mohan');
   });
 
   it('suspension takes them offline and off the list at once', async () => {
     const { token, admin, id } = await approvedAstrologer();
     await request(app).put('/v1/provider/availability').set(as(token)).send({ chat: true });
-    const res = await request(app).post(`/admin/v1/astrologers/${id}/suspend`).set(as(admin)).send({ reason: 'Asked a user to pay outside the app' });
+    const res = await request(app)
+      .post(`/admin/v1/astrologers/${id}/suspend`)
+      .set(as(admin))
+      .send({ reason: 'Asked a user to pay outside the app' });
     expect(res.body.status).toBe('suspended');
     expect((await request(app).get('/v1/astrologers')).body.total).toBe(0);
     expect((await request(app).get('/v1/provider/home').set(as(token))).body.error.code).toBe('ASTROLOGER_SUSPENDED');

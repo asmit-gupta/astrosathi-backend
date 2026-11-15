@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import { requireProviderAuth } from '../../middleware/auth';
+import { Router, type Request } from 'express';
+import { authOf, requireProviderAuth } from '../../middleware/auth';
 import { validateBody } from '../../middleware/validate';
 import * as application from './application.service';
 import {
@@ -21,11 +21,13 @@ import * as uploads from './uploads.service';
 export const providerRouter = Router();
 providerRouter.use(requireProviderAuth);
 
-const uid = (req: { auth?: { userId: string } }) => req.auth!.userId;
+const uid = (req: Request) => authOf(req).userId;
 
 // Uploads: ask for a link, PUT the file to it, then confirm.
 providerRouter.post('/uploads', validateBody(uploadBody), async (req, res) => {
-  res.status(201).json(await uploads.createUpload(uid(req), req.body.purpose, req.body.contentType, req.body.sizeBytes));
+  res
+    .status(201)
+    .json(await uploads.createUpload(uid(req), req.body.purpose, req.body.contentType, req.body.sizeBytes));
 });
 providerRouter.post('/uploads/:id/complete', async (req, res) => {
   res.json(await uploads.completeUpload(uid(req), String(req.params.id)));

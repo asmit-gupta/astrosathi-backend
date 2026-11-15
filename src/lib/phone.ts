@@ -2,7 +2,10 @@ import { decryptPii, encryptPii, hmac } from './crypto';
 
 /** Indian mobile: 10 digits starting 6–9 (spec §8.3). Accepts an optional +91 / 91 / 0 prefix and spaces. */
 export function normaliseIndianMobile(input: string): string | null {
-  const digits = input.replace(/[\s-]/g, '').replace(/^\+?91(?=\d{10}$)/, '').replace(/^0(?=\d{10}$)/, '');
+  const digits = input
+    .replace(/[\s-]/g, '')
+    .replace(/^\+?91(?=\d{10}$)/, '')
+    .replace(/^0(?=\d{10}$)/, '');
   return /^[6-9]\d{9}$/.test(digits) ? digits : null;
 }
 

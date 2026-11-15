@@ -35,7 +35,9 @@ export function createApp() {
   // Readiness: the database is reachable and migrated. Use this for load-balancer checks.
   app.get('/health/ready', async (_req, res) => {
     try {
-      const [row] = await prisma.$queryRaw<{ users: string | null }[]>`SELECT to_regclass('public.users')::text AS users`;
+      const [row] = await prisma.$queryRaw<
+        { users: string | null }[]
+      >`SELECT to_regclass('public.users')::text AS users`;
       if (!row?.users) {
         res.status(503).json({ status: 'not_ready', db: 'unmigrated' });
         return;

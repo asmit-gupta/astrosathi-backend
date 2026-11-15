@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { Prisma } from '@prisma/client';
+import { type Prisma } from '@prisma/client';
 import { authPolicy } from '../../config/authPolicy';
 import { env } from '../../config/env';
 import { addSeconds, clock } from '../../lib/clock';

@@ -81,7 +81,11 @@ export async function schedule(
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'settings:' + key}))`;
     const before = await inForce(tx, key, now);
-    const last = await tx.setting.findFirst({ where: { key }, orderBy: { version: 'desc' }, select: { version: true } });
+    const last = await tx.setting.findFirst({
+      where: { key },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    });
     const row = await tx.setting.create({
       data: {
         key,
@@ -118,7 +122,11 @@ export async function cancel(key: string, version: number, reason: string, actor
     if (!row) throw notFound('SETTING_VERSION_NOT_FOUND', 'No such version');
     if (row.cancelledAt) throw new AppError(409, 'SETTING_ALREADY_CANCELLED', 'Already cancelled');
     if (row.effectiveFrom <= now) {
-      throw new AppError(409, 'SETTING_ALREADY_EFFECTIVE', 'This version is already in force. Schedule a new value instead.');
+      throw new AppError(
+        409,
+        'SETTING_ALREADY_EFFECTIVE',
+        'This version is already in force. Schedule a new value instead.',
+      );
     }
     const updated = await tx.setting.update({ where: { id: row.id }, data: { cancelledAt: now } });
     await audit.record(tx, {

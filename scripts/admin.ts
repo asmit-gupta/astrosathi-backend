@@ -37,7 +37,8 @@ function ask(question: string, hidden = false): Promise<string> {
 async function readNewPassword(): Promise<string> {
   const fromEnv = process.env.ADMIN_PASSWORD;
   if (fromEnv) {
-    if (fromEnv.length < MIN_ADMIN_PASSWORD_LENGTH) throw new Error(`ADMIN_PASSWORD must be at least ${MIN_ADMIN_PASSWORD_LENGTH} characters`);
+    if (fromEnv.length < MIN_ADMIN_PASSWORD_LENGTH)
+      throw new Error(`ADMIN_PASSWORD must be at least ${MIN_ADMIN_PASSWORD_LENGTH} characters`);
     return fromEnv;
   }
   for (;;) {
@@ -112,7 +113,10 @@ async function resetPassword() {
   const password = await readNewPassword();
   const now = new Date();
   await prisma.$transaction([
-    prisma.admin.update({ where: { id: admin.id }, data: { passwordHash: await hashPassword(password), passwordAt: now } }),
+    prisma.admin.update({
+      where: { id: admin.id },
+      data: { passwordHash: await hashPassword(password), passwordAt: now },
+    }),
     prisma.adminSession.updateMany({ where: { adminId: admin.id, revokedAt: null }, data: { revokedAt: now } }),
   ]);
   await audit('admin.password_reset', admin.id);

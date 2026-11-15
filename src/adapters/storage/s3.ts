@@ -21,8 +21,16 @@ export class S3Storage implements StorageProvider {
 
   async createUploadLink(key: string, contentType: string, sizeBytes: number, ttlSeconds: number): Promise<UploadLink> {
     // Type and length are signed, so the client can't upload a bigger or different file with this link.
-    const cmd = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType, ContentLength: sizeBytes });
-    const url = await getSignedUrl(this.client, cmd, { expiresIn: ttlSeconds, signableHeaders: new Set(['content-type', 'content-length']) });
+    const cmd = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: contentType,
+      ContentLength: sizeBytes,
+    });
+    const url = await getSignedUrl(this.client, cmd, {
+      expiresIn: ttlSeconds,
+      signableHeaders: new Set(['content-type', 'content-length']),
+    });
     return {
       url,
       method: 'PUT',
@@ -32,7 +40,9 @@ export class S3Storage implements StorageProvider {
   }
 
   async createViewLink(key: string, ttlSeconds: number): Promise<string> {
-    return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn: ttlSeconds });
+    return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), {
+      expiresIn: ttlSeconds,
+    });
   }
 
   async head(key: string) {
