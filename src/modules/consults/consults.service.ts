@@ -132,15 +132,15 @@ export async function request(userId: string, b: { astrologerId: string; mode: C
       where: { id: b.astrologerId, status: 'approved', listed: true },
       include: { availability: true, scheduleSlots: true },
     });
-    if (!a) throw notFound('ASTROLOGER_NOT_FOUND', 'Not available.');
+    if (!a) throw notFound('PROVIDER_NOT_FOUND', 'Not available.');
     if (a.userId === userId) throw badRequest('OWN_PROFILE', 'You cannot consult yourself.');
     const rates = await currentRates(tx, a.id);
     const rate = rates[b.mode];
     if (rate === undefined || !onlineModes(a, a.availability, rates, a.scheduleSlots)[b.mode]) {
-      throw conflict('ASTROLOGER_OFFLINE', 'Not online right now.');
+      throw conflict('PROVIDER_OFFLINE', 'Not online right now.');
     }
     if (await tx.consult.findFirst({ where: { astrologerId: a.id, status: { in: OPEN } }, select: { id: true } })) {
-      throw conflict('ASTROLOGER_BUSY', 'In another consult right now.');
+      throw conflict('PROVIDER_BUSY', 'In another consult right now.');
     }
     const bal = await balance(tx, userId);
     if (bal < rate * minMinutes) {

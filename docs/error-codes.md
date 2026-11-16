@@ -20,7 +20,7 @@ Regenerate after adding codes: `npm run docs:errors`.
 | `VALIDATION_FAILED`         | 400    | admin, astrologers, catalog, middleware, users |
 | `APPLICATION_INCOMPLETE`    | 400    | astrologers                                    |
 | `APPLICATION_LOCKED`        | 409    | astrologers                                    |
-| `ASTROLOGER_NOT_FOUND`      | 404    | astrologers, consults                          |
+| `ASTROLOGER_NOT_FOUND`      | 404    | astrologers                                    |
 | `ASTROLOGER_SUSPENDED`      | 403    | astrologers                                    |
 | `BIO_NOT_ALLOWED`           | 400    | astrologers                                    |
 | `DOCUMENT_NOT_FOUND`        | 404    | astrologers                                    |
@@ -80,6 +80,7 @@ Regenerate after adding codes: `npm run docs:errors`.
 | `MODE_NOT_AVAILABLE`        | 400    | consults                                       |
 | `NOT_APPROVED_YET`          | 403    | consults                                       |
 | `OWN_PROFILE`               | 400    | consults                                       |
+| `PROVIDER_NOT_FOUND`        | 404    | consults                                       |
 | `ADMIN_IP_NOT_ALLOWED`      | 403    | middleware                                     |
 | `STEP_UP_REQUIRED`          | 403    | middleware                                     |
 | `WRONG_APP`                 | 403    | middleware                                     |

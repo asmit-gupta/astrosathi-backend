@@ -128,7 +128,7 @@ describe('chat consults', () => {
 
     // Busy while waiting; can't double-book.
     expect((await request(app).get('/v1/astrologers')).body.items[0].status).toBe('busy');
-    expect((await start(other.accessToken)).body.error.code).toBe('ASTROLOGER_BUSY');
+    expect((await start(other.accessToken)).body.error.code).toBe('PROVIDER_BUSY');
 
     // Accept charges the first minute: ₹30 → astrologer ₹12 (40%), platform ₹18.
     const acc = await request(app).post(`/v1/provider/consults/${id}/accept`).set(as(astro.token));
