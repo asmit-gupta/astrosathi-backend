@@ -20,7 +20,7 @@ Regenerate after adding codes: `npm run docs:errors`.
 | `VALIDATION_FAILED`         | 400    | admin, astrologers, catalog, middleware, users |
 | `APPLICATION_INCOMPLETE`    | 400    | astrologers                                    |
 | `APPLICATION_LOCKED`        | 409    | astrologers                                    |
-| `ASTROLOGER_NOT_FOUND`      | 404    | astrologers                                    |
+| `ASTROLOGER_NOT_FOUND`      | 404    | astrologers, consults                          |
 | `ASTROLOGER_SUSPENDED`      | 403    | astrologers                                    |
 | `BIO_NOT_ALLOWED`           | 400    | astrologers                                    |
 | `DOCUMENT_NOT_FOUND`        | 404    | astrologers                                    |
@@ -57,7 +57,7 @@ Regenerate after adding codes: `npm run docs:errors`.
 | `UPLOAD_TOO_LARGE`          | 400    | astrologers                                    |
 | `UPLOAD_TYPE_NOT_ALLOWED`   | 400    | astrologers                                    |
 | `ACCOUNT_DELETED`           | 403    | auth                                           |
-| `INVALID_MOBILE`            | 400    | auth                                           |
+| `INVALID_MOBILE`            | 400    | auth, consults                                 |
 | `OTP_EXPIRED`               | 400    | auth                                           |
 | `OTP_INVALID`               | 400    | auth                                           |
 | `OTP_LOCKED`                | 429    | auth                                           |
@@ -70,7 +70,16 @@ Regenerate after adding codes: `npm run docs:errors`.
 | `SMS_SEND_FAILED`           | 502    | auth                                           |
 | `TOKEN_EXPIRED`             | 401    | auth                                           |
 | `TOKEN_INVALID`             | 401    | auth                                           |
-| `USER_NOT_FOUND`            | 404    | auth, users                                    |
+| `USER_NOT_FOUND`            | 404    | auth, consults, users                          |
+| `BIRTH_PROFILE_NOT_FOUND`   | 404    | consults, users                                |
+| `CONSULT_NOT_FOUND`         | 404    | consults                                       |
+| `LOW_BALANCE`               | 402    | consults                                       |
+| `MESSAGE_EMPTY`             | 400    | consults                                       |
+| `MESSAGE_ID_TAKEN`          | 400    | consults                                       |
+| `MESSAGE_TOO_LONG`          | 400    | consults                                       |
+| `MODE_NOT_AVAILABLE`        | 400    | consults                                       |
+| `NOT_APPROVED_YET`          | 403    | consults                                       |
+| `OWN_PROFILE`               | 400    | consults                                       |
 | `ADMIN_IP_NOT_ALLOWED`      | 403    | middleware                                     |
 | `STEP_UP_REQUIRED`          | 403    | middleware                                     |
 | `WRONG_APP`                 | 403    | middleware                                     |
@@ -82,7 +91,6 @@ Regenerate after adding codes: `npm run docs:errors`.
 | `SETTING_VERSION_NOT_FOUND` | 404    | settings                                       |
 | `ACCOUNT_SUSPENDED`         | 409    | users                                          |
 | `BIRTH_PROFILE_LIMIT`       | 409    | users                                          |
-| `BIRTH_PROFILE_NOT_FOUND`   | 404    | users                                          |
 | `DOB_IN_FUTURE`             | 400    | users                                          |
 | `DOB_TOO_EARLY`             | 400    | users                                          |
 | `NO_DELETION_PENDING`       | 404    | users                                          |

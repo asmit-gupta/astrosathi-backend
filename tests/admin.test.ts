@@ -177,8 +177,8 @@ describe('settings', () => {
     const { auth } = await signedIn();
     const res = await request(app).get('/admin/v1/settings').set(auth);
     const share = res.body.settings.find((s: { key: string }) => s.key === 'platform_share_pct');
-    expect(share).toMatchObject({ value: 40, version: 0, isDefault: true, scheduled: [] });
-    expect(await settings.get('platform_share_pct')).toBe(40);
+    expect(share).toMatchObject({ value: 60, version: 0, isDefault: true, scheduled: [] });
+    expect(await settings.get('platform_share_pct')).toBe(60);
   });
 
   it('applies an immediate change and audits before/after', async () => {
@@ -199,7 +199,7 @@ describe('settings', () => {
       .set(t.auth)
       .send({ value: 38, effectiveFrom, reason: 'December promotion' });
     expect(res.status).toBe(201);
-    expect(await settings.get('platform_share_pct')).toBe(40);
+    expect(await settings.get('platform_share_pct')).toBe(60);
 
     const list = await request(app).get('/admin/v1/settings').set(t.auth);
     const share = list.body.settings.find((s: { key: string }) => s.key === 'platform_share_pct');

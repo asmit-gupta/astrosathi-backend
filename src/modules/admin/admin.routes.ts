@@ -5,6 +5,7 @@ import { prisma } from '../../lib/prisma';
 import { adminClientIp, adminIpAllowlist, adminOf, requireAdmin, requireStepUp } from '../../middleware/adminAuth';
 import { validateBody } from '../../middleware/validate';
 import { adminAstrologersRouter } from '../astrologers/admin.routes';
+import { adminWalletRouter } from '../consults/consults.routes';
 import * as settings from '../settings/settings.service';
 import * as adminAuth from './adminAuth.service';
 
@@ -95,3 +96,4 @@ adminRouter.post(
 // ---- Astrologers (board Y2) ----
 
 adminRouter.use(adminAstrologersRouter);
+adminRouter.use(adminWalletRouter);

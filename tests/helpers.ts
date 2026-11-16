@@ -4,6 +4,7 @@ import { afterAll } from 'vitest';
 import { sms, type SendOtpInput, type SmsProvider } from '../src/adapters/sms';
 import { createApp } from '../src/app';
 import { clock } from '../src/lib/clock';
+import { attachRealtime } from '../src/modules/consults/realtime';
 
 /**
  * One server per test file, bound to 127.0.0.1 so the OS hands out a port that is free on that
@@ -11,7 +12,13 @@ import { clock } from '../src/lib/clock';
  * another local service on 127.0.0.1, which then answers instead of our app.)
  */
 export const app: Server = createApp().listen(0, '127.0.0.1');
-afterAll(() => new Promise<void>((resolve) => app.close(() => resolve())));
+const realtime = attachRealtime(app);
+afterAll(async () => {
+  await (
+    await realtime
+  )();
+  await new Promise<void>((resolve) => app.close(() => resolve()));
+});
 
 /** Captures codes instead of sending SMS; can be switched to fail. */
 export class FakeSms implements SmsProvider {

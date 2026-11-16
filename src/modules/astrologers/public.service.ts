@@ -20,7 +20,13 @@ export interface ListQuery {
   offset: number;
 }
 
-const include = { availability: true, scheduleSlots: true, place: { select: { name: true, state: true } } } as const;
+const include = {
+  availability: true,
+  scheduleSlots: true,
+  place: { select: { name: true, state: true } },
+  // An open consult makes them "busy".
+  consults: { where: { status: { in: ['requested', 'active'] } }, select: { id: true }, take: 1 },
+} satisfies Prisma.AstrologerInclude;
 
 /**
  * Listed astrologers for the user app (spec §8.6). Ranking (quality gate, preference match) arrives
@@ -49,7 +55,7 @@ export async function list(q: ListQuery) {
   let cards = await Promise.all(rows.map((r) => publicCard(r, rates.get(r.id) ?? {}, photoKey(r.photoUploadId))));
   const { mode, minRatePaise, maxRatePaise } = q;
   if (mode) cards = cards.filter((c) => c.modes.includes(mode));
-  if (q.online) cards = cards.filter((c) => c.status === 'online');
+  if (q.online) cards = cards.filter((c) => c.status !== 'offline');
 
   const price = (c: (typeof cards)[number]) => (q.mode ? c.rates[q.mode] : c.fromRatePaise) ?? Number.MAX_SAFE_INTEGER;
   // Live min and max for the price slider, before the price filter applies (W2-3 note 1).
@@ -66,14 +72,13 @@ export async function list(q: ListQuery) {
       case 'experience':
         return (b.experienceYears ?? 0) - (a.experienceYears ?? 0);
       default:
-        return (
-          (a.status === 'online' ? 0 : 1) - (b.status === 'online' ? 0 : 1) ||
-          (b.experienceYears ?? 0) - (a.experienceYears ?? 0)
-        );
+        return rank(a.status) - rank(b.status) || (b.experienceYears ?? 0) - (a.experienceYears ?? 0);
     }
   });
   return { items: cards.slice(q.offset, q.offset + q.limit), total: cards.length, priceRange };
 }
+
+const rank = (status: string) => ({ online: 0, busy: 1 })[status] ?? 2;
 
 /** Profile page (spec §8.7): the card plus about, and a trust panel showing only what's true. */
 export async function get(id: string) {

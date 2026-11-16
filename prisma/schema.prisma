@@ -123,6 +123,8 @@ model User {
   uploads       Upload[]
   preferences   UserPreference?
   dataRequests  DataRequest[]
+  wallet        Wallet?
+  consults      Consult[]
 
   @@map("users")
 }
@@ -519,6 +521,7 @@ model Astrologer {
   fixes         ApplicationFix[]
   revisions     ProfileRevision[]
   scheduleSlots AstrologerScheduleSlot[]
+  consults      Consult[]
 
   @@index([status, submittedAt])
   @@index([listed, primaryCategory])
@@ -660,4 +663,117 @@ model Upload {
 
   @@index([ownerUserId, purpose])
   @@map("uploads")
+}
+
+// ---------- Wallet and ledger (build step 2, first part) ----------
+
+/// The ledger is append-only and double-entry: every transaction's entries add up to zero.
+enum LedgerAccount {
+  wallet // a user's prepaid balance (owner = user)
+  earnings // what an astrologer has earned (owner = astrologer)
+  platform // the platform's share
+  adjustment // money the admin adds by hand (testing, goodwill)
+}
+
+enum LedgerKind {
+  admin_credit
+  consult_minute
+}
+
+/// Cached balance, changed only in the same transaction as its ledger entries.
+model Wallet {
+  userId       String   @id @map("user_id") @db.Uuid
+  balancePaise Int      @default(0) @map("balance_paise")
+  updatedAt    DateTime @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("wallets")
+}
+
+model LedgerEntry {
+  id          String        @id @default(uuid()) @db.Uuid
+  txnId       String        @map("txn_id") @db.Uuid
+  account     LedgerAccount
+  ownerId     String?       @map("owner_id") @db.Uuid
+  amountPaise Int           @map("amount_paise")
+  kind        LedgerKind
+  consultId   String?       @map("consult_id") @db.Uuid
+  /// For consult_minute: which minute (1, 2, …). With consultId and account it makes charges idempotent.
+  minute      Int?
+  note        String?
+  createdAt   DateTime      @map("created_at")
+
+  @@unique([consultId, minute, account])
+  @@index([account, ownerId, createdAt])
+  @@map("ledger_entries")
+}
+
+// ---------- Consults (build step 5, chat first) ----------
+
+enum ConsultStatus {
+  requested
+  active
+  ended
+  declined
+  missed
+  cancelled
+}
+
+/// One paid consult. Rate and share are fixed when it starts; billing is per started minute (founder, 16 Nov 2026).
+model Consult {
+  id                String        @id @default(uuid()) @db.Uuid
+  userId            String        @map("user_id") @db.Uuid
+  astrologerId      String        @map("astrologer_id") @db.Uuid
+  mode              ConsultMode
+  status            ConsultStatus
+  ratePaise         Int           @map("rate_paise")
+  platformSharePct  Int           @map("platform_share_pct")
+  /// Birth details the user shared, copied at request time.
+  birth             Json?
+  requestedAt       DateTime      @map("requested_at")
+  acceptedAt        DateTime?     @map("accepted_at")
+  endedAt           DateTime?     @map("ended_at")
+  endReason         String?       @map("end_reason")
+  minutesBilled     Int           @default(0) @map("minutes_billed")
+  chargedPaise      Int           @default(0) @map("charged_paise")
+  /// When the next minute is charged; the current minute is paid until then.
+  nextChargeAt      DateTime?     @map("next_charge_at")
+  userSeenAt        DateTime?     @map("user_seen_at")
+  astrologerSeenAt  DateTime?     @map("astrologer_seen_at")
+  lastSeq           Int           @default(0) @map("last_seq")
+  userReadSeq       Int           @default(0) @map("user_read_seq")
+  astrologerReadSeq Int           @default(0) @map("astrologer_read_seq")
+
+  user       User             @relation(fields: [userId], references: [id])
+  astrologer Astrologer       @relation(fields: [astrologerId], references: [id])
+  messages   ConsultMessage[]
+
+  @@index([userId, status])
+  @@index([astrologerId, status])
+  @@index([status, nextChargeAt])
+  @@map("consults")
+}
+
+enum MessageSender {
+  user
+  astrologer
+  system
+}
+
+model ConsultMessage {
+  /// Made by the sender's phone, so a resend after a network drop is stored once.
+  id        String        @id @db.Uuid
+  consultId String        @map("consult_id") @db.Uuid
+  seq       Int
+  sender    MessageSender
+  body      String
+  /// Contact details or off-app payment words were masked.
+  flagged   Boolean       @default(false)
+  createdAt DateTime      @map("created_at")
+
+  consult Consult @relation(fields: [consultId], references: [id])
+
+  @@unique([consultId, seq])
+  @@map("consult_messages")
 }

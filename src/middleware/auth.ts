@@ -10,23 +10,25 @@ import { verifyAccessToken } from '../modules/auth/token.service';
  * on another device or a revocation takes effect immediately, not after token expiry.
  * `app` limits the route to sessions from that app: a user-app token can't call astrologer routes, and back.
  */
+export async function authenticateToken(token: string, app: AuthApp | 'any'): Promise<AuthContext> {
+  const claims = verifyAccessToken(token);
+  const session = await prisma.authSession.findUnique({
+    where: { id: claims.sid },
+    select: { userId: true, revokedAt: true, revokeReason: true, app: true },
+  });
+  if (!session || session.userId !== claims.sub || session.revokedAt) {
+    throw unauthorized('SESSION_REVOKED', 'Signed out. Please sign in again.');
+  }
+  if (app !== 'any' && session.app !== app) throw forbidden('WRONG_APP', 'This session belongs to the other app.');
+  return { userId: claims.sub, sessionId: claims.sid, roles: claims.roles, app: session.app };
+}
+
 const authFor =
   (app: AuthApp | 'any'): RequestHandler =>
   async (req, _res, next) => {
     const header = req.header('authorization');
     if (!header?.startsWith('Bearer ')) throw unauthorized();
-
-    const claims = verifyAccessToken(header.slice(7).trim());
-    const session = await prisma.authSession.findUnique({
-      where: { id: claims.sid },
-      select: { userId: true, revokedAt: true, revokeReason: true, app: true },
-    });
-    if (!session || session.userId !== claims.sub || session.revokedAt) {
-      throw unauthorized('SESSION_REVOKED', 'Signed out. Please sign in again.');
-    }
-    if (app !== 'any' && session.app !== app) throw forbidden('WRONG_APP', 'This session belongs to the other app.');
-
-    req.auth = { userId: claims.sub, sessionId: claims.sid, roles: claims.roles, app: session.app };
+    req.auth = await authenticateToken(header.slice(7).trim(), app);
     next();
   };
 

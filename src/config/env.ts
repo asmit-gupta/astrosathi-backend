@@ -10,6 +10,8 @@ const schema = z
     PORT: z.coerce.number().int().positive().default(4000),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
     DATABASE_URL: z.string().min(1),
+    // Direct (unpooled) database URL. Also used to LISTEN for realtime chat events across servers.
+    DIRECT_URL: blankAsUnset(z.string().min(1).optional()),
 
     JWT_ACCESS_SECRET: z.string().min(32),
     HASH_PEPPER: z.string().min(32),

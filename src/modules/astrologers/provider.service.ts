@@ -1,6 +1,7 @@
 import type { Astrologer, ConsultMode, Prisma } from '@prisma/client';
 import { astrologerPolicy } from '../../config/astrologerPolicy';
 import { addSeconds, clock } from '../../lib/clock';
+import { todayInIndia } from '../../lib/dates';
 import { AppError, badRequest } from '../../lib/errors';
 import { prisma } from '../../lib/prisma';
 import * as settings from '../settings/settings.service';
@@ -25,7 +26,8 @@ async function approvedAstrologer(userId: string): Promise<Astrologer> {
 export async function home(userId: string) {
   const a = await approvedAstrologer(userId);
   const now = clock.now();
-  const [av, slots, rates, pendingRates, pendingRevision] = await Promise.all([
+  const dayStart = new Date(`${todayInIndia()}T00:00:00+05:30`);
+  const [av, slots, rates, pendingRates, pendingRevision, earned, sessions] = await Promise.all([
     prisma.astrologerAvailability.findUnique({ where: { astrologerId: a.id } }),
     prisma.astrologerScheduleSlot.findMany({ where: { astrologerId: a.id } }),
     currentRates(prisma, a.id),
@@ -37,6 +39,11 @@ export async function home(userId: string) {
       orderBy: { createdAt: 'desc' },
     }),
     prisma.profileRevision.findFirst({ where: { astrologerId: a.id, status: 'pending' } }),
+    prisma.ledgerEntry.aggregate({
+      where: { account: 'earnings', ownerId: a.id, createdAt: { gte: dayStart } },
+      _sum: { amountPaise: true },
+    }),
+    prisma.consult.count({ where: { astrologerId: a.id, acceptedAt: { gte: dayStart } } }),
   ]);
   const online = onlineModes(a, av, rates, slots);
   const hours = scheduleState(slots, now);
@@ -67,8 +74,8 @@ export async function home(userId: string) {
       effectiveFrom: r.effectiveFrom,
     })),
     profileEditInReview: !!pendingRevision,
-    // Earnings, sessions and rating arrive with consult sessions (build step 5).
-    today: { earningsPaise: 0, sessions: 0, rating: null },
+    // Ratings arrive with the post-consult screen.
+    today: { earningsPaise: earned._sum.amountPaise ?? 0, sessions, rating: null },
   };
 }
 

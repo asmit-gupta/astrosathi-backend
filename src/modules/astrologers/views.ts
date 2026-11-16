@@ -135,6 +135,7 @@ export async function applicationView(a: Astrologer) {
 type Card = Astrologer & {
   availability: AstrologerAvailability | null;
   scheduleSlots: Slot[];
+  consults: { id: string }[];
   place: { name: string; state: string | null } | null;
 };
 
@@ -157,7 +158,8 @@ export async function publicCard(a: Card, rates: RateMap, photoKey: string | nul
     fromRatePaise: prices.length ? Math.min(...prices) : null,
     modes: MODES.filter((m) => a.capabilities.includes(`consult_${m}`) && rates[m] !== undefined),
     online,
-    status: statusWord(online),
+    busy: a.consults.length > 0,
+    status: a.consults.length > 0 && statusWord(online) === 'online' ? 'busy' : statusWord(online),
     hostsLive: a.capabilities.includes('host_live'),
   };
 }

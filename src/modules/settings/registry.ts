@@ -21,7 +21,7 @@ const def = <T extends z.ZodTypeAny>(group: string, description: string, schema:
 
 export const SETTINGS = {
   // Money
-  platform_share_pct: def('money', 'Platform share of every consult, pack and puja (handoff D1, D14)', pct, 40),
+  platform_share_pct: def('money', 'Platform share of every consult, pack and puja (founder, 16 Nov 2026)', pct, 60),
   topup_min_paise: def('money', 'Smallest wallet top-up (handoff D6)', paise, 5_000),
   topup_max_paise: def('money', 'Largest single wallet top-up (handoff D6)', paise, 1_000_000),
   topup_slabs_paise: def(

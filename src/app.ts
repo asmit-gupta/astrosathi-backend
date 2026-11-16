@@ -12,6 +12,7 @@ import { providerRouter } from './modules/astrologers/provider.routes';
 import { astrologersPublicRouter } from './modules/astrologers/public.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import { catalogRouter } from './modules/catalog/catalog.routes';
+import { providerConsultsRouter, userConsultsRouter } from './modules/consults/consults.routes';
 import { meRouter } from './modules/users/users.routes';
 
 export function createApp() {
@@ -51,7 +52,9 @@ export function createApp() {
 
   app.use('/v1/auth', authRouter);
   app.use('/v1/me', meRouter);
+  app.use('/v1/me', userConsultsRouter);
   app.use('/v1/provider', providerRouter);
+  app.use('/v1/provider', providerConsultsRouter);
   app.use('/v1', catalogRouter);
   app.use('/v1', astrologersPublicRouter);
   app.use('/admin/v1', adminRouter);

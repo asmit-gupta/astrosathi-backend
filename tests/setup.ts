@@ -12,7 +12,7 @@ import { prisma } from '../src/lib/prisma';
 beforeEach(async () => {
   clock.set(null);
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE astrologer_schedule_slots, profile_revisions, astrologer_availability, application_fixes, astrologer_events, astrologer_rates, astrologer_kyc, astrologers, uploads, admin_sessions, admins, admin_login_attempts, audit_logs, settings, data_requests, user_preferences, birth_profiles, refresh_tokens, auth_sessions, consents, otp_requests, users RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE consult_messages, consults, ledger_entries, wallets, astrologer_schedule_slots, profile_revisions, astrologer_availability, application_fixes, astrologer_events, astrologer_rates, astrologer_kyc, astrologers, uploads, admin_sessions, admins, admin_login_attempts, audit_logs, settings, data_requests, user_preferences, birth_profiles, refresh_tokens, auth_sessions, consents, otp_requests, users RESTART IDENTITY CASCADE',
   );
 });
 
