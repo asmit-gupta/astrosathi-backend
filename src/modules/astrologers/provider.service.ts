@@ -10,6 +10,7 @@ import type { RevisionInput, ScheduleInput } from './astrologers.schemas';
 import { assertRateAllowed, currentRates, MODES } from './rates.service';
 import { overlaps, scheduleDrives, scheduleState, toHhmm, toMinute } from './schedule';
 import { assertUsableUpload } from './uploads.service';
+import { ratingOf } from '../consults/reviews.service';
 import { onlineModes, statusWord } from './views';
 
 async function approvedAstrologer(userId: string): Promise<Astrologer> {
@@ -74,8 +75,9 @@ export async function home(userId: string) {
       effectiveFrom: r.effectiveFrom,
     })),
     profileEditInReview: !!pendingRevision,
-    // Ratings arrive with the post-consult screen.
-    today: { earningsPaise: earned._sum.amountPaise ?? 0, sessions, rating: null },
+    // Rating is the overall average from reviews (W3-4).
+    today: { earningsPaise: earned._sum.amountPaise ?? 0, sessions, rating: ratingOf(a) },
+    ratingCount: a.ratingCount,
   };
 }
 

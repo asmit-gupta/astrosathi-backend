@@ -44,7 +44,7 @@ async function own(p: Party, id: string): Promise<Consult> {
 // ---------- Views ----------
 
 async function views(c: Consult) {
-  const [timeout, a, u, bal] = await Promise.all([
+  const [timeout, a, u, bal, review] = await Promise.all([
     settings.get('request_timeout_seconds'),
     prisma.astrologer.findUniqueOrThrow({
       where: { id: c.astrologerId },
@@ -52,6 +52,7 @@ async function views(c: Consult) {
     }),
     prisma.user.findUniqueOrThrow({ where: { id: c.userId }, select: { name: true } }),
     balance(prisma, c.userId),
+    prisma.consultReview.findUnique({ where: { consultId: c.id }, select: { stars: true, text: true } }),
   ]);
   const photo = a.photoUploadId
     ? await viewLink((await prisma.upload.findUnique({ where: { id: a.photoUploadId } }))?.storageKey)
@@ -77,6 +78,7 @@ async function views(c: Consult) {
       ...common,
       chargedPaise: c.chargedPaise,
       balancePaise: bal,
+      review,
       provider: { id: c.astrologerId, displayName: a.displayName, photoUrl: photo },
     },
     provider: {

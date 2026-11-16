@@ -73,6 +73,7 @@ Regenerate after adding codes: `npm run docs:errors`.
 | `USER_NOT_FOUND`            | 404    | auth, consults, users                          |
 | `BIRTH_PROFILE_NOT_FOUND`   | 404    | consults, users                                |
 | `CONSULT_NOT_FOUND`         | 404    | consults                                       |
+| `CONSULT_NOT_REVIEWABLE`    | 409    | consults                                       |
 | `LOW_BALANCE`               | 402    | consults                                       |
 | `MESSAGE_EMPTY`             | 400    | consults                                       |
 | `MESSAGE_ID_TAKEN`          | 400    | consults                                       |

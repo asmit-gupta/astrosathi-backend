@@ -125,6 +125,7 @@ model User {
   dataRequests  DataRequest[]
   wallet        Wallet?
   consults      Consult[]
+  reviews       ConsultReview[]
 
   @@map("users")
 }
@@ -508,6 +509,9 @@ model Astrologer {
   reapplyAfter          DateTime?        @map("reapply_after")
   suspendReason         String?          @map("suspend_reason")
   submittedAt           DateTime?        @map("submitted_at")
+  /// Running totals of review stars, so lists show the average without counting (W2-4).
+  ratingSum             Int              @default(0) @map("rating_sum")
+  ratingCount           Int              @default(0) @map("rating_count")
   approvedAt            DateTime?        @map("approved_at") // starts the new-astrologer rate cap
   createdAt             DateTime         @map("created_at")
   updatedAt             DateTime         @map("updated_at")
@@ -522,6 +526,7 @@ model Astrologer {
   revisions     ProfileRevision[]
   scheduleSlots AstrologerScheduleSlot[]
   consults      Consult[]
+  reviews       ConsultReview[]
 
   @@index([status, submittedAt])
   @@index([listed, primaryCategory])
@@ -749,6 +754,7 @@ model Consult {
   user       User             @relation(fields: [userId], references: [id])
   astrologer Astrologer       @relation(fields: [astrologerId], references: [id])
   messages   ConsultMessage[]
+  review     ConsultReview?
 
   @@index([userId, status])
   @@index([astrologerId, status])
@@ -777,4 +783,23 @@ model ConsultMessage {
 
   @@unique([consultId, seq])
   @@map("consult_messages")
+}
+
+/// One rating per paid consult, by its user (W3-4). Shown on the profile; contact details masked.
+model ConsultReview {
+  id           String   @id @default(uuid()) @db.Uuid
+  consultId    String   @unique @map("consult_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  astrologerId String   @map("astrologer_id") @db.Uuid
+  stars        Int
+  text         String?
+  createdAt    DateTime @map("created_at")
+  updatedAt    DateTime @map("updated_at")
+
+  consult    Consult    @relation(fields: [consultId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+  astrologer Astrologer @relation(fields: [astrologerId], references: [id])
+
+  @@index([astrologerId, createdAt])
+  @@map("consult_reviews")
 }

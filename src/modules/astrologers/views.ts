@@ -3,6 +3,7 @@ import { clock } from '../../lib/clock';
 import { prisma } from '../../lib/prisma';
 import { placeView } from '../catalog/catalog.routes';
 import { currentRates, MODES, rateCap, type RateMap } from './rates.service';
+import { ratingOf } from '../consults/reviews.service';
 import { scheduleDrives, scheduleState, type Slot } from './schedule';
 import { uploadView, viewLink } from './uploads.service';
 
@@ -161,5 +162,7 @@ export async function publicCard(a: Card, rates: RateMap, photoKey: string | nul
     busy: a.consults.length > 0,
     status: a.consults.length > 0 && statusWord(online) === 'online' ? 'busy' : statusWord(online),
     hostsLive: a.capabilities.includes('host_live'),
+    rating: ratingOf(a),
+    ratingCount: a.ratingCount,
   };
 }

@@ -5,6 +5,7 @@ import { authOf, requireAuth, requireProviderAuth } from '../../middleware/auth'
 import { notFound } from '../../lib/errors';
 import { validateBody } from '../../middleware/validate';
 import * as consults from './consults.service';
+import * as reviews from './reviews.service';
 import * as wallet from './wallet.service';
 
 const requestBody = z.object({
@@ -15,6 +16,7 @@ const requestBody = z.object({
 });
 const messageBody = z.object({ id: z.string().uuid(), body: z.string() });
 const readBody = z.object({ seq: z.number().int().min(0) });
+const reviewBody = z.object({ stars: z.number().int().min(1).max(5), text: z.string().max(2000).optional() });
 const after = (req: Request) => Math.max(0, Number(req.query.after) || 0);
 const uuid = z.string().uuid();
 const id = (req: Request) => {
@@ -64,6 +66,9 @@ userConsultsRouter.post('/consults', validateBody(requestBody), async (req, res)
       birthProfileId: req.body.birthProfileId,
     }),
   );
+});
+userConsultsRouter.put('/consults/:id/review', validateBody(reviewBody), async (req, res) => {
+  res.json(await reviews.rate(authOf(req).userId, id(req), req.body));
 });
 shared(userConsultsRouter, (req) => ({ side: 'user', userId: authOf(req).userId }));
 

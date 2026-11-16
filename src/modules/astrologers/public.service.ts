@@ -1,5 +1,6 @@
 import type { ConsultMode, Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
+import { latest } from '../consults/reviews.service';
 import { currentRatesMany } from './rates.service';
 import { publicCard } from './views';
 
@@ -96,6 +97,7 @@ export async function get(id: string) {
   return {
     ...card,
     bio: a.bio,
+    reviews: await latest(a.id),
     methodNames: a.methods.map((m) => methodTags.find((t) => t.slug === m) ?? { slug: m, nameEn: m, nameHi: m }),
     trust: {
       identityVerified: verified('pan') && verified('id_front'),

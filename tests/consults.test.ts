@@ -190,6 +190,30 @@ describe('chat consults', () => {
     const home = await request(app).get('/v1/provider/home').set(as(astro.token));
     expect(home.body.today).toMatchObject({ earningsPaise: 2400, sessions: 1 });
     expect((await request(app).get('/v1/astrologers')).body.items[0].status).toBe('online');
+
+    // Rating (W3-4): once ended and paid, 1–5 stars and optional text; contact details hidden.
+    const rate = (body: object) => request(app).put(`/v1/me/consults/${id}/review`).set(as(user)).send(body);
+    expect((await rate({ stars: 6 })).status).toBe(400);
+    expect((await rate({ stars: 5, text: 'Very clear guidance. Call 9876543210' })).body).toEqual({
+      stars: 5,
+      text: 'Very clear guidance. Call •••',
+    });
+    let profile = (await request(app).get(`/v1/astrologers/${astro.id}`)).body;
+    expect(profile).toMatchObject({ rating: 5, ratingCount: 1 });
+    expect(profile.reviews[0]).toMatchObject({ stars: 5, text: 'Very clear guidance. Call •••' });
+    // Rating again replaces it; the count stays one.
+    await rate({ stars: 3 });
+    profile = (await request(app).get(`/v1/astrologers/${astro.id}`)).body;
+    expect(profile).toMatchObject({ rating: 3, ratingCount: 1 });
+    expect((await request(app).get(`/v1/me/consults/${id}`).set(as(user))).body.review).toEqual({
+      stars: 3,
+      text: null,
+    });
+    expect((await request(app).get('/v1/provider/home').set(as(astro.token))).body.today.rating).toBe(3);
+    // Only the user of that consult.
+    expect(
+      (await request(app).put(`/v1/me/consults/${id}/review`).set(as(other.accessToken)).send({ stars: 1 })).status,
+    ).toBe(404);
   });
 
   it('a request nobody answers is missed', async () => {
@@ -197,6 +221,10 @@ describe('chat consults', () => {
     const { accessToken: user } = await signIn('9876511111');
     await credit(await adminToken(), '9876511111', 20_000);
     const req = await request(app).post('/v1/me/consults').set(as(user)).send({ providerId: astro.id, mode: 'chat' });
+    expect(
+      (await request(app).put(`/v1/me/consults/${req.body.id}/review`).set(as(user)).send({ stars: 5 })).body.error
+        .code,
+    ).toBe('CONSULT_NOT_REVIEWABLE');
     advance(31);
     await sweep();
     const c = await request(app).get(`/v1/me/consults/${req.body.id}`).set(as(user));
