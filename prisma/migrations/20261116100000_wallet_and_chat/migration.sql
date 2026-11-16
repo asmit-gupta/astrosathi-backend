@@ -8,7 +8,7 @@ CREATE TYPE "LedgerKind" AS ENUM ('admin_credit', 'consult_minute');
 CREATE TYPE "ConsultStatus" AS ENUM ('requested', 'active', 'ended', 'declined', 'missed', 'cancelled');
 
 -- CreateEnum
-CREATE TYPE "MessageSender" AS ENUM ('user', 'astrologer', 'system');
+CREATE TYPE "MessageSender" AS ENUM ('user', 'provider', 'system');
 
 -- CreateTable
 CREATE TABLE "wallets" (

@@ -34,7 +34,7 @@ async function partyFor(token: string): Promise<{ party: consults.Party; key: st
   const auth = await authenticateToken(token, 'any');
   if (auth.app === 'provider') {
     const party = await consults.astrologerParty(auth.userId);
-    return { party, key: party.side === 'astrologer' ? astrologerKey(party.astrologerId) : '' };
+    return { party, key: party.side === 'provider' ? astrologerKey(party.astrologerId) : '' };
   }
   return { party: { side: 'user', userId: auth.userId }, key: userKey(auth.userId) };
 }

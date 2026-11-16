@@ -15,7 +15,8 @@ import { maskContacts } from './mask';
 import { balance, chargeMinute } from './wallet.service';
 
 /** Who is acting: the user app, or the astrologer app for one astrologer. */
-export type Party = { side: 'user'; userId: string } | { side: 'astrologer'; userId: string; astrologerId: string };
+/** Wire name for the astrologer side is 'provider', matching the /v1/provider app routes. */
+export type Party = { side: 'user'; userId: string } | { side: 'provider'; userId: string; astrologerId: string };
 
 const OPEN: ConsultStatus[] = ['requested', 'active'];
 const conflict = (code: string, message: string, details?: Record<string, unknown>) =>
@@ -31,7 +32,7 @@ const otherKey = (p: Party, c: Pick<Consult, 'userId' | 'astrologerId'>) =>
 export async function astrologerParty(userId: string): Promise<Party> {
   const a = await prisma.astrologer.findUnique({ where: { userId }, select: { id: true, status: true } });
   if (!a || a.status !== 'approved') throw new AppError(403, 'NOT_APPROVED_YET', 'Your profile is not live.');
-  return { side: 'astrologer', userId, astrologerId: a.id };
+  return { side: 'provider', userId, astrologerId: a.id };
 }
 
 async function own(p: Party, id: string): Promise<Consult> {
@@ -69,16 +70,16 @@ async function views(c: Consult) {
     minutesBilled: c.minutesBilled,
     paidUntil: c.nextChargeAt,
     lastSeq: c.lastSeq,
-    readSeq: { user: c.userReadSeq, astrologer: c.astrologerReadSeq },
+    readSeq: { user: c.userReadSeq, provider: c.astrologerReadSeq },
   };
   return {
     user: {
       ...common,
       chargedPaise: c.chargedPaise,
       balancePaise: bal,
-      astrologer: { id: c.astrologerId, displayName: a.displayName, photoUrl: photo },
+      provider: { id: c.astrologerId, displayName: a.displayName, photoUrl: photo },
     },
-    astrologer: {
+    provider: {
       ...common,
       earnedPaise: share,
       client: { name: u.name, birth: c.birth },
@@ -95,7 +96,7 @@ async function announce(c: Consult): Promise<void> {
   const v = await views(c);
   await Promise.all([
     publish([userKey(c.userId)], { t: 'consult', consult: v.user }),
-    publish([astrologerKey(c.astrologerId)], { t: 'consult', consult: v.astrologer }),
+    publish([astrologerKey(c.astrologerId)], { t: 'consult', consult: v.provider }),
   ]);
 }
 
@@ -205,7 +206,7 @@ export async function accept(p: Party, id: string) {
   }
   const after = await prisma.consult.findUniqueOrThrow({ where: { id } });
   await announce(after);
-  return (await views(after)).astrologer;
+  return (await views(after)).provider;
 }
 
 export async function decline(p: Party, id: string) {

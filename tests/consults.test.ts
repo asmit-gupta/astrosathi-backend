@@ -154,7 +154,7 @@ describe('chat consults', () => {
       .set(as(astro.token))
       .send({ id: randomUUID(), body: 'Namaste. Your chart, please.' });
     const history = await request(app).get(`/v1/me/consults/${id}/messages?after=1`).set(as(user));
-    expect(history.body.items.map((m: { sender: string }) => m.sender)).toEqual(['astrologer']);
+    expect(history.body.items.map((m: { sender: string }) => m.sender)).toEqual(['provider']);
 
     // Typing passes through.
     astroWs.ws.send(JSON.stringify({ t: 'typing', consultId: id }));
@@ -212,7 +212,7 @@ describe('chat consults', () => {
     for (let m = 2; m <= 6; m++) {
       advance(60);
       await touch({ side: 'user', userId: u.id });
-      await touch({ side: 'astrologer', userId: '', astrologerId: astro.id });
+      await touch({ side: 'provider', userId: '', astrologerId: astro.id });
       await sweep();
     }
     const c = await request(app).get(`/v1/me/consults/${id}`).set(as(user));

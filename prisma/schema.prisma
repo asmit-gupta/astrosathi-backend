@@ -757,7 +757,7 @@ model Consult {
 
 enum MessageSender {
   user
-  astrologer
+  provider // the astrologer (wire name, as in /v1/provider)
   system
 }
 
