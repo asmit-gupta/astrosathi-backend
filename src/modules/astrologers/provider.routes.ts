@@ -11,6 +11,7 @@ import {
   rateChangeBody,
   ratesBody,
   revisionBody,
+  scheduleBody,
   submitBody,
   uploadBody,
 } from './astrologers.schemas';
@@ -68,6 +69,12 @@ providerRouter.get('/home', async (req, res) => {
 });
 providerRouter.put('/availability', validateBody(availabilityBody), async (req, res) => {
   res.json(await provider.setAvailability(uid(req), req.body));
+});
+providerRouter.get('/schedule', async (req, res) => {
+  res.json(await provider.schedule(uid(req)));
+});
+providerRouter.put('/schedule', validateBody(scheduleBody), async (req, res) => {
+  res.json(await provider.saveSchedule(uid(req), req.body));
 });
 providerRouter.post('/rates', validateBody(rateChangeBody), async (req, res) => {
   res.json(await provider.requestRateChange(uid(req), req.body.mode, req.body.ratePaise));

@@ -3,23 +3,27 @@ import { clock } from '../../lib/clock';
 import { prisma } from '../../lib/prisma';
 import { placeView } from '../catalog/catalog.routes';
 import { currentRates, MODES, rateCap, type RateMap } from './rates.service';
+import { scheduleDrives, scheduleState, type Slot } from './schedule';
 import { uploadView, viewLink } from './uploads.service';
 
-/** Online per mode: switched on, not away, and the mode was granted and has a rate. */
+/**
+ * Online per mode: not away, the mode was granted and has a rate, and it is switched on. For modes on
+ * the weekly schedule (X4-4), "switched on" means inside the hours, unless a manual switch still wins.
+ */
 export function onlineModes(
   a: Pick<Astrologer, 'capabilities' | 'status'>,
   av: AstrologerAvailability | null,
   rates: RateMap,
+  slots: Slot[],
 ) {
-  const away = !!av?.awayUntil && av.awayUntil > clock.now();
+  const now = clock.now();
+  const away = !!av?.awayUntil && av.awayUntil > now;
+  const { inHours } = scheduleState(slots, now);
   const out = {} as Record<ConsultMode, boolean>;
   for (const m of MODES) {
+    const on = scheduleDrives(av, m, now) ? inHours : !!av?.[m];
     out[m] =
-      a.status === 'approved' &&
-      !away &&
-      !!av?.[m] &&
-      a.capabilities.includes(`consult_${m}`) &&
-      rates[m] !== undefined;
+      a.status === 'approved' && !away && on && a.capabilities.includes(`consult_${m}`) && rates[m] !== undefined;
   }
   return out;
 }
@@ -130,12 +134,13 @@ export async function applicationView(a: Astrologer) {
 
 type Card = Astrologer & {
   availability: AstrologerAvailability | null;
+  scheduleSlots: Slot[];
   place: { name: string; state: string | null } | null;
 };
 
 /** List card (spec §8.6): photo, name, category, rating later, experience, languages, price, status. */
 export async function publicCard(a: Card, rates: RateMap, photoKey: string | null) {
-  const online = onlineModes(a, a.availability, rates);
+  const online = onlineModes(a, a.availability, rates, a.scheduleSlots);
   const prices = MODES.map((m) => rates[m]).filter((r): r is number => r !== undefined);
   return {
     id: a.id,

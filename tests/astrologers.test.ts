@@ -472,6 +472,58 @@ describe('after approval', () => {
     expect((await request(app).get('/v1/provider/home').set(as(again))).body.status).toBe('online');
   });
 
+  it('weekly schedule: online inside the hours, a manual switch wins until the block ends', async () => {
+    // Frozen at Sunday 11:30 India time.
+    const { token } = await approvedAstrologer();
+    const save = (body: object) => request(app).put('/v1/provider/schedule').set(as(token)).send(body);
+    const sunday = (start: string, end: string) => ({ weekday: 7, start, end });
+
+    expect((await save({ enabled: true, modes: ['video'], slots: [sunday('11:00', '13:00')] })).body.error.code).toBe(
+      'MODE_NOT_ENABLED',
+    );
+    expect((await save({ enabled: true, modes: ['chat'], slots: [sunday('13:00', '11:00')] })).body.error.code).toBe(
+      'SLOT_INVALID',
+    );
+    const overlap = [sunday('09:00', '12:00'), sunday('11:00', '13:00')];
+    expect((await save({ enabled: true, modes: ['chat'], slots: overlap })).body.error.code).toBe('SLOT_OVERLAP');
+    expect((await save({ enabled: true, modes: ['chat'], slots: [] })).body.error.code).toBe('SCHEDULE_EMPTY');
+
+    const saved = await save({
+      enabled: true,
+      modes: ['chat'],
+      slots: [sunday('11:00', '13:00'), sunday('18:00', '24:00')],
+    });
+    expect(saved.status).toBe(200);
+    expect(saved.body.slots).toEqual([sunday('11:00', '13:00'), sunday('18:00', '24:00')]);
+
+    const home = (await request(app).get('/v1/provider/home').set(as(token))).body;
+    expect(home.status).toBe('online');
+    expect(home.schedule).toMatchObject({ enabled: true, inHours: true, nextChangeAt: '2026-11-15T07:30:00.000Z' });
+    expect((await request(app).get('/v1/astrologers?online=1')).body.total).toBe(1);
+
+    // Switching off during the block wins until 13:00, then the schedule takes over again.
+    const off = await request(app).put('/v1/provider/availability').set(as(token)).send({ chat: false });
+    expect(off.body.status).toBe('offline');
+    expect(off.body.schedule.manualUntil).toBe('2026-11-15T07:30:00.000Z');
+
+    advance(2 * 3600); // 13:30: outside the hours
+    let t = await providerLogin();
+    const after = (await request(app).get('/v1/provider/home').set(as(t))).body;
+    expect(after).toMatchObject({ status: 'offline', schedule: { inHours: false, manualUntil: null } });
+    expect(after.schedule.nextChangeAt).toBe('2026-11-15T12:30:00.000Z');
+
+    advance(5 * 3600); // 18:30: inside the evening block
+    t = await providerLogin();
+    expect((await request(app).get('/v1/provider/home').set(as(t))).body.status).toBe('online');
+
+    // Turning the schedule off hands control back to the switches.
+    await request(app)
+      .put('/v1/provider/schedule')
+      .set(as(t))
+      .send({ enabled: false, modes: ['chat'], slots: [] });
+    expect((await request(app).get('/v1/provider/home').set(as(t))).body.status).toBe('offline');
+  });
+
   it('rate changes: cuts apply now, small rises after 24 hours, big rises wait for the admin', async () => {
     let { token } = await approvedAstrologer();
     advance(1);

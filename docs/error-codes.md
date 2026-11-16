@@ -45,6 +45,9 @@ Regenerate after adding codes: `npm run docs:errors`.
 | `REAPPLY_TOO_SOON`          | 409    | astrologers                                    |
 | `REVISION_NOT_FOUND`        | 404    | astrologers                                    |
 | `REVISION_PENDING`          | 409    | astrologers                                    |
+| `SCHEDULE_EMPTY`            | 400    | astrologers                                    |
+| `SLOT_INVALID`              | 400    | astrologers                                    |
+| `SLOT_OVERLAP`              | 400    | astrologers                                    |
 | `UNKNOWN_METHOD`            | 400    | astrologers                                    |
 | `UNKNOWN_TOPIC`             | 400    | astrologers, users                             |
 | `UPLOAD_INVALID`            | 400    | astrologers                                    |

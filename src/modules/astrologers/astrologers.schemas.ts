@@ -108,6 +108,15 @@ export const availabilityBody = z.object({
     .optional(),
 });
 
+/** Weekly schedule (X4-4): India time, "HH:MM"; an end of "24:00" means midnight. */
+const hhmm = z.string().regex(/^(([01]\d|2[0-3]):[0-5]\d|24:00)$/, 'use HH:MM');
+export const scheduleBody = z.object({
+  enabled: z.boolean(),
+  modes: z.array(z.enum(['chat', 'voice', 'video'])).max(3),
+  slots: z.array(z.object({ weekday: z.number().int().min(1).max(7), start: hhmm, end: hhmm })).max(p.scheduleMaxSlots),
+});
+export type ScheduleInput = z.infer<typeof scheduleBody>;
+
 export const revisionBody = z
   .object({
     displayName: personName(p.displayName.max).optional(),

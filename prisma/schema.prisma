@@ -510,14 +510,15 @@ model Astrologer {
   createdAt             DateTime         @map("created_at")
   updatedAt             DateTime         @map("updated_at")
 
-  user         User                    @relation(fields: [userId], references: [id])
-  place        Place?                  @relation(fields: [placeId], references: [id])
-  kyc          AstrologerKyc?
-  availability AstrologerAvailability?
-  rates        AstrologerRate[]
-  events       AstrologerEvent[]
-  fixes        ApplicationFix[]
-  revisions    ProfileRevision[]
+  user          User                     @relation(fields: [userId], references: [id])
+  place         Place?                   @relation(fields: [placeId], references: [id])
+  kyc           AstrologerKyc?
+  availability  AstrologerAvailability?
+  rates         AstrologerRate[]
+  events        AstrologerEvent[]
+  fixes         ApplicationFix[]
+  revisions     ProfileRevision[]
+  scheduleSlots AstrologerScheduleSlot[]
 
   @@index([status, submittedAt])
   @@index([listed, primaryCategory])
@@ -607,16 +608,37 @@ model ProfileRevision {
 
 /// Per-mode online switches (X2-1). A mode only counts if the admin granted it.
 model AstrologerAvailability {
-  astrologerId String    @id @map("astrologer_id") @db.Uuid
-  chat         Boolean   @default(false)
-  voice        Boolean   @default(false)
-  video        Boolean   @default(false)
-  awayUntil    DateTime? @map("away_until")
-  updatedAt    DateTime  @map("updated_at")
+  astrologerId      String    @id @map("astrologer_id") @db.Uuid
+  chat              Boolean   @default(false)
+  voice             Boolean   @default(false)
+  video             Boolean   @default(false)
+  awayUntil         DateTime? @map("away_until")
+  /// Weekly schedule (X4-4): inside a slot the schedule's modes count as online.
+  scheduleEnabled   Boolean   @default(false) @map("schedule_enabled")
+  scheduleModes     String[]  @map("schedule_modes")
+  /// A manual switch during a scheduled slot wins until that slot ends.
+  scheduleSkipUntil DateTime? @map("schedule_skip_until")
+  updatedAt         DateTime  @map("updated_at")
 
   astrologer Astrologer @relation(fields: [astrologerId], references: [id])
 
   @@map("astrologer_availability")
+}
+
+/// One block of weekly hours, in India time. Overnight hours are two slots.
+model AstrologerScheduleSlot {
+  id           String @id @default(uuid()) @db.Uuid
+  astrologerId String @map("astrologer_id") @db.Uuid
+  /// ISO weekday: 1 = Monday … 7 = Sunday.
+  weekday      Int
+  /// Minutes after midnight, India time; start < end.
+  startMinute  Int    @map("start_minute")
+  endMinute    Int    @map("end_minute")
+
+  astrologer Astrologer @relation(fields: [astrologerId], references: [id])
+
+  @@index([astrologerId, weekday])
+  @@map("astrologer_schedule_slots")
 }
 
 /// Files uploaded straight to object storage with a short-lived link. Documents carry the admin's review.

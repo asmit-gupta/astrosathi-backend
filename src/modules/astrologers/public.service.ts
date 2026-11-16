@@ -20,7 +20,7 @@ export interface ListQuery {
   offset: number;
 }
 
-const include = { availability: true, place: { select: { name: true, state: true } } } as const;
+const include = { availability: true, scheduleSlots: true, place: { select: { name: true, state: true } } } as const;
 
 /**
  * Listed astrologers for the user app (spec §8.6). Ranking (quality gate, preference match) arrives

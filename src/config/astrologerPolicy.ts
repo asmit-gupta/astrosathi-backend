@@ -44,6 +44,8 @@ export const astrologerPolicy = {
   ],
   /** "Away for a bit" choices (X2-1). */
   awayMinutes: [15, 30, 60],
+  /** Weekly schedule (X4-4): most hour blocks across the week. */
+  scheduleMaxSlots: 42,
   rejectReapplyDays: 30,
   /** Rate changes that don't need review take effect after this delay, so prices don't jump overnight (spec §9.10). */
   rateChangeDelayHours: 24,
