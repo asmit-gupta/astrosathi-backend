@@ -110,7 +110,7 @@ describe('chat consults', () => {
     const { accessToken: user } = await signIn('9876511111');
     const admin = await adminToken();
     const start = (token = user) =>
-      request(app).post('/v1/me/consults').set(as(token)).send({ astrologerId: astro.id, mode: 'chat' });
+      request(app).post('/v1/me/consults').set(as(token)).send({ providerId: astro.id, mode: 'chat' });
 
     // 5 minutes of balance are needed to start.
     expect((await start()).body.error).toMatchObject({ code: 'LOW_BALANCE', details: { needPaise: RATE * 5 } });
@@ -186,7 +186,7 @@ describe('chat consults', () => {
     const astro = await liveAstrologer();
     const { accessToken: user } = await signIn('9876511111');
     await credit(await adminToken(), '9876511111', 20_000);
-    const req = await request(app).post('/v1/me/consults').set(as(user)).send({ astrologerId: astro.id, mode: 'chat' });
+    const req = await request(app).post('/v1/me/consults').set(as(user)).send({ providerId: astro.id, mode: 'chat' });
     advance(31);
     await sweep();
     const c = await request(app).get(`/v1/me/consults/${req.body.id}`).set(as(user));
@@ -202,7 +202,7 @@ describe('chat consults', () => {
     const admin = await adminToken();
     await credit(admin, '9876511111', RATE * 5);
     const start = async () => {
-      const r = await request(app).post('/v1/me/consults').set(as(user)).send({ astrologerId: astro.id, mode: 'chat' });
+      const r = await request(app).post('/v1/me/consults').set(as(user)).send({ providerId: astro.id, mode: 'chat' });
       expect(r.status, JSON.stringify(r.body)).toBe(201);
       await request(app).post(`/v1/provider/consults/${r.body.id}/accept`).set(as(astro.token));
       return r.body.id as string;
@@ -234,7 +234,7 @@ describe('chat consults', () => {
     const astro = await liveAstrologer();
     const { accessToken: user } = await signIn('9876511111');
     await credit(await adminToken(), '9876511111', 20_000);
-    const req = await request(app).post('/v1/me/consults').set(as(user)).send({ astrologerId: astro.id, mode: 'chat' });
+    const req = await request(app).post('/v1/me/consults').set(as(user)).send({ providerId: astro.id, mode: 'chat' });
     const stranger = await signIn('9876533333');
     expect((await request(app).get(`/v1/me/consults/${req.body.id}`).set(as(stranger.accessToken))).status).toBe(404);
     expect((await request(app).get('/v1/me/consults/not-a-uuid').set(as(user))).status).toBe(404);

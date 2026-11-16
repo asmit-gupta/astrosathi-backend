@@ -8,7 +8,8 @@ import * as consults from './consults.service';
 import * as wallet from './wallet.service';
 
 const requestBody = z.object({
-  astrologerId: z.string().uuid(),
+  /** The astrologer (called provider on the wire, like /v1/provider). */
+  providerId: z.string().uuid(),
   mode: z.enum(['chat', 'voice', 'video']),
   birthProfileId: z.string().uuid().optional(),
 });
@@ -52,7 +53,13 @@ userConsultsRouter.get('/wallet', async (req, res) => {
   res.json(await wallet.walletView(authOf(req).userId));
 });
 userConsultsRouter.post('/consults', validateBody(requestBody), async (req, res) => {
-  res.status(201).json(await consults.request(authOf(req).userId, req.body));
+  res.status(201).json(
+    await consults.request(authOf(req).userId, {
+      astrologerId: req.body.providerId,
+      mode: req.body.mode,
+      birthProfileId: req.body.birthProfileId,
+    }),
+  );
 });
 shared(userConsultsRouter, (req) => ({ side: 'user', userId: authOf(req).userId }));
 
