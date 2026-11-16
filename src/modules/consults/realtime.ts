@@ -77,6 +77,7 @@ export async function attachRealtime(server: Server): Promise<() => Promise<void
     const set = sockets.get(key) ?? new Set<WebSocket>();
     set.add(ws);
     sockets.set(key, set);
+    void consults.touch(party).catch(() => undefined);
 
     ws.on('message', (raw) => {
       alive.add(ws);
@@ -119,6 +120,7 @@ async function handle(ws: WebSocket, party: consults.Party, msg: z.infer<typeof 
     case 'read':
       return consults.markRead(party, msg.consultId, msg.seq);
     case 'ping':
+      await consults.touch(party);
       ws.send(JSON.stringify({ t: 'pong' }));
       return;
   }

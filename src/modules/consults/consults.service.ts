@@ -183,6 +183,8 @@ export async function accept(p: Party, id: string) {
         minutesBilled: 1,
         chargedPaise: c.ratePaise,
         nextChargeAt: addSeconds(now, consultPolicy.billingSeconds),
+        userSeenAt: now,
+        astrologerSeenAt: now,
       },
     });
     if (moved.count === 0) throw conflict('CONSULT_NOT_PENDING', 'This request is no longer waiting.');
@@ -269,12 +271,16 @@ export async function hasOpenConsult(userId: string): Promise<boolean> {
 
 /**
  * Runs every couple of seconds on every server. Each step is a conditional update, so two servers
- * running it at once can't double-charge or double-end. A chat ends only when the money runs out or
- * someone taps End (founder, 16 Nov 2026): silence or a dropped connection never ends it.
+ * running it at once can't double-charge or double-end. A chat ends when the money runs out, someone
+ * taps End, or one side's app loses its connection for longer than `reconnect_window_seconds`.
+ * Being in the app without writing never ends it (founder, 16 Nov 2026).
  */
 export async function sweep(): Promise<void> {
   const now = clock.now();
-  const timeout = await settings.get('request_timeout_seconds');
+  const [timeout, reconnect] = await Promise.all([
+    settings.get('request_timeout_seconds'),
+    settings.get('reconnect_window_seconds'),
+  ]);
 
   const expired = await prisma.consult.findMany({
     where: { status: 'requested', requestedAt: { lte: addSeconds(now, -timeout) } },
@@ -285,6 +291,16 @@ export async function sweep(): Promise<void> {
       data: { status: 'missed', endedAt: now, endReason: 'no_answer' },
     });
     if (r.count) await announce({ ...c, status: 'missed', endedAt: now, endReason: 'no_answer' });
+  }
+
+  const goneBefore = addSeconds(now, -reconnect);
+  const lost = await prisma.consult.findMany({
+    where: { status: 'active', OR: [{ userSeenAt: { lt: goneBefore } }, { astrologerSeenAt: { lt: goneBefore } }] },
+    select: { id: true },
+  });
+  for (const { id } of lost) {
+    if (await finish(id, 'disconnected', now))
+      await announce(await prisma.consult.findUniqueOrThrow({ where: { id } }));
   }
 
   const due = await prisma.consult.findMany({ where: { status: 'active', nextChargeAt: { lte: now } } });
@@ -402,6 +418,14 @@ export async function typing(p: Party, consultId: string): Promise<void> {
     select: { userId: true, astrologerId: true },
   });
   if (c) await publish([otherKey(p, c)], { t: 'typing', consultId, side: p.side });
+}
+
+/** The app is open and connected (socket connect, heartbeat every 20 s). */
+export async function touch(p: Party): Promise<void> {
+  await prisma.consult.updateMany({
+    where: { ...partyWhere(p), status: 'active' },
+    data: p.side === 'user' ? { userSeenAt: clock.now() } : { astrologerSeenAt: clock.now() },
+  });
 }
 
 // ---------- History (Chats tab) ----------

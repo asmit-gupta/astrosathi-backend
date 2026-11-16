@@ -6,7 +6,7 @@ import { WebSocket } from 'ws';
 import { clock } from '../src/lib/clock';
 import { randomToken, sha256 } from '../src/lib/crypto';
 import { prisma } from '../src/lib/prisma';
-import { sweep } from '../src/modules/consults/consults.service';
+import { sweep, touch } from '../src/modules/consults/consults.service';
 import { maskContacts } from '../src/modules/consults/mask';
 import { app, freezeTime, login, useFakeSms, type FakeSms } from './helpers';
 
@@ -206,9 +206,9 @@ describe('chat consults', () => {
     );
   });
 
-  it('ends only when the money runs out or someone ends it; silence never ends it', async () => {
+  it('silence never ends it (apps open); the money running out or a lost connection does', async () => {
     const astro = await liveAstrologer();
-    const { accessToken: user } = await signIn('9876511111');
+    const { accessToken: user, user: u } = await signIn('9876511111');
     const admin = await adminToken();
     await credit(admin, '9876511111', RATE * 5);
     const start = async () => {
@@ -220,7 +220,9 @@ describe('chat consults', () => {
 
     const id = await start();
     for (let m = 2; m <= 6; m++) {
-      advance(60); // nobody writes anything for five minutes
+      advance(60); // nobody writes for five minutes, but both apps stay open (heartbeats)
+      await touch({ side: 'user', userId: u.id });
+      await touch({ side: 'provider', userId: '', astrologerId: astro.id });
       await sweep();
     }
     const c = await request(app).get(`/v1/me/consults/${id}`).set(as(user));
@@ -232,6 +234,18 @@ describe('chat consults', () => {
     expect(mine.body.items[0].name).toBe('Pt. Mohan Sharma');
     const theirs = await request(app).get('/v1/provider/consults').set(as(astro.token));
     expect(theirs.body.items[0]).toMatchObject({ id, amountPaise: 5 * 1200 });
+    // Lost connection: the astrologer's app stops sending heartbeats → the chat ends after the grace window.
+    await prisma.adminSession.updateMany({ data: { stepUpAt: clock.now() } }); // a fresh admin code
+    await credit(admin, '9876511111', RATE * 5);
+    const id2 = await start();
+    advance(60);
+    await touch({ side: 'user', userId: u.id });
+    await sweep();
+    advance(70); // 130 s without the astrologer's app
+    await touch({ side: 'user', userId: u.id });
+    await sweep();
+    const c2 = await request(app).get(`/v1/me/consults/${id2}`).set(as(user));
+    expect(c2.body).toMatchObject({ status: 'ended', endReason: 'disconnected', minutesBilled: 2 });
   });
 
   it('keeps the other side out', async () => {

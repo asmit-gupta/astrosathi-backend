@@ -52,6 +52,8 @@ CREATE TABLE "consults" (
     "minutes_billed" INTEGER NOT NULL DEFAULT 0,
     "charged_paise" INTEGER NOT NULL DEFAULT 0,
     "next_charge_at" TIMESTAMP(3),
+    "user_seen_at" TIMESTAMP(3),
+    "astrologer_seen_at" TIMESTAMP(3),
     "last_seq" INTEGER NOT NULL DEFAULT 0,
     "user_read_seq" INTEGER NOT NULL DEFAULT 0,
     "astrologer_read_seq" INTEGER NOT NULL DEFAULT 0,
