@@ -739,8 +739,6 @@ model Consult {
   chargedPaise      Int           @default(0) @map("charged_paise")
   /// When the next minute is charged; the current minute is paid until then.
   nextChargeAt      DateTime?     @map("next_charge_at")
-  userSeenAt        DateTime?     @map("user_seen_at")
-  astrologerSeenAt  DateTime?     @map("astrologer_seen_at")
   lastSeq           Int           @default(0) @map("last_seq")
   userReadSeq       Int           @default(0) @map("user_read_seq")
   astrologerReadSeq Int           @default(0) @map("astrologer_read_seq")

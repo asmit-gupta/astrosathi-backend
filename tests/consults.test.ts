@@ -6,7 +6,7 @@ import { WebSocket } from 'ws';
 import { clock } from '../src/lib/clock';
 import { randomToken, sha256 } from '../src/lib/crypto';
 import { prisma } from '../src/lib/prisma';
-import { sweep, touch } from '../src/modules/consults/consults.service';
+import { sweep } from '../src/modules/consults/consults.service';
 import { maskContacts } from '../src/modules/consults/mask';
 import { app, freezeTime, login, useFakeSms, type FakeSms } from './helpers';
 
@@ -156,6 +156,16 @@ describe('chat consults', () => {
     const history = await request(app).get(`/v1/me/consults/${id}/messages?after=1`).set(as(user));
     expect(history.body.items.map((m: { sender: string }) => m.sender)).toEqual(['provider']);
 
+    // Ticks: the reply is unread until the user opens it; then the astrologer sees it was read.
+    expect((await request(app).get('/v1/me/consults').set(as(user))).body.items[0]).toMatchObject({ unread: 1 });
+    userWs.ws.send(JSON.stringify({ t: 'read', consultId: id, seq: 2 }));
+    await astroWs.waitFor((e) => e.t === 'read' && e.side === 'user' && e.seq === 2);
+    expect((await request(app).get('/v1/me/consults').set(as(user))).body.items[0]).toMatchObject({ unread: 0 });
+    expect((await request(app).get(`/v1/provider/consults/${id}`).set(as(astro.token))).body.readSeq).toEqual({
+      user: 2,
+      provider: 2,
+    });
+
     // Typing passes through.
     astroWs.ws.send(JSON.stringify({ t: 'typing', consultId: id }));
     await userWs.waitFor((e) => e.t === 'typing');
@@ -196,9 +206,9 @@ describe('chat consults', () => {
     );
   });
 
-  it('ends when the balance runs out, or when a side disappears', async () => {
+  it('ends only when the money runs out or someone ends it; silence never ends it', async () => {
     const astro = await liveAstrologer();
-    const { accessToken: user, user: u } = await signIn('9876511111');
+    const { accessToken: user } = await signIn('9876511111');
     const admin = await adminToken();
     await credit(admin, '9876511111', RATE * 5);
     const start = async () => {
@@ -210,24 +220,18 @@ describe('chat consults', () => {
 
     const id = await start();
     for (let m = 2; m <= 6; m++) {
-      advance(60);
-      await touch({ side: 'user', userId: u.id });
-      await touch({ side: 'provider', userId: '', astrologerId: astro.id });
+      advance(60); // nobody writes anything for five minutes
       await sweep();
     }
     const c = await request(app).get(`/v1/me/consults/${id}`).set(as(user));
     expect(c.body).toMatchObject({ status: 'ended', endReason: 'balance', minutesBilled: 5, balancePaise: 0 });
 
-    // Disconnect: no heartbeat for longer than the reconnect window.
-    await prisma.adminSession.updateMany({ data: { stepUpAt: clock.now() } }); // a fresh admin code
-    await credit(admin, '9876511111', RATE * 5);
-    const id2 = await start();
-    advance(60);
-    await sweep(); // minute 2 is charged (still within the window)
-    advance(120);
-    await sweep();
-    const c2 = await request(app).get(`/v1/me/consults/${id2}`).set(as(user));
-    expect(c2.body).toMatchObject({ status: 'ended', endReason: 'disconnected', minutesBilled: 2 });
+    // History (Chats tab): newest first, with the money and the other side.
+    const mine = await request(app).get('/v1/me/consults').set(as(user));
+    expect(mine.body.items[0]).toMatchObject({ id, status: 'ended', minutesBilled: 5, amountPaise: 5 * RATE });
+    expect(mine.body.items[0].name).toBe('Pt. Mohan Sharma');
+    const theirs = await request(app).get('/v1/provider/consults').set(as(astro.token));
+    expect(theirs.body.items[0]).toMatchObject({ id, amountPaise: 5 * 1200 });
   });
 
   it('keeps the other side out', async () => {

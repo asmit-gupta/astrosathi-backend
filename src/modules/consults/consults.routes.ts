@@ -25,6 +25,10 @@ const id = (req: Request) => {
 
 /** Chat routes both apps share; `who` turns the request into a consult party. */
 function shared(router: Router, who: (req: Request) => Promise<consults.Party> | consults.Party) {
+  router.get('/consults', async (req, res) => {
+    const before = typeof req.query.before === 'string' ? new Date(req.query.before) : undefined;
+    res.json(await consults.history(await who(req), before && !Number.isNaN(before.getTime()) ? before : undefined));
+  });
   router.get('/consults/current', async (req, res) => {
     res.json({ consult: await consults.current(await who(req)) });
   });

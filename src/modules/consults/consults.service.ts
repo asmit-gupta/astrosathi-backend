@@ -183,8 +183,6 @@ export async function accept(p: Party, id: string) {
         minutesBilled: 1,
         chargedPaise: c.ratePaise,
         nextChargeAt: addSeconds(now, consultPolicy.billingSeconds),
-        userSeenAt: now,
-        astrologerSeenAt: now,
       },
     });
     if (moved.count === 0) throw conflict('CONSULT_NOT_PENDING', 'This request is no longer waiting.');
@@ -271,14 +269,12 @@ export async function hasOpenConsult(userId: string): Promise<boolean> {
 
 /**
  * Runs every couple of seconds on every server. Each step is a conditional update, so two servers
- * running it at once can't double-charge or double-end.
+ * running it at once can't double-charge or double-end. A chat ends only when the money runs out or
+ * someone taps End (founder, 16 Nov 2026): silence or a dropped connection never ends it.
  */
 export async function sweep(): Promise<void> {
   const now = clock.now();
-  const [timeout, reconnect] = await Promise.all([
-    settings.get('request_timeout_seconds'),
-    settings.get('reconnect_window_seconds'),
-  ]);
+  const timeout = await settings.get('request_timeout_seconds');
 
   const expired = await prisma.consult.findMany({
     where: { status: 'requested', requestedAt: { lte: addSeconds(now, -timeout) } },
@@ -294,20 +290,14 @@ export async function sweep(): Promise<void> {
   const due = await prisma.consult.findMany({ where: { status: 'active', nextChargeAt: { lte: now } } });
   for (const c of due) {
     try {
-      await nextMinute(c, now, addSeconds(now, -reconnect));
+      await nextMinute(c, now);
     } catch (err) {
       logger.error({ err, consultId: c.id }, 'Consult billing step failed');
     }
   }
 }
 
-async function nextMinute(c: Consult, now: Date, staleBefore: Date): Promise<void> {
-  const gone = (c.userSeenAt && c.userSeenAt < staleBefore) || (c.astrologerSeenAt && c.astrologerSeenAt < staleBefore);
-  if (gone) {
-    if (await finish(c.id, 'disconnected', now))
-      await announce(await prisma.consult.findUniqueOrThrow({ where: { id: c.id } }));
-    return;
-  }
+async function nextMinute(c: Consult, now: Date): Promise<void> {
   const minute = c.minutesBilled + 1;
   const paid = await prisma
     .$transaction(async (tx) => {
@@ -344,12 +334,14 @@ export async function send(p: Party, consultId: string, id: string, body: string
   const masked = maskContacts(text);
   const at = clock.now();
   const ts = at.toISOString().replace('Z', '');
-  const seen = P.raw(p.side === 'user' ? 'user_seen_at' : 'astrologer_seen_at');
+  // Writing a message means you have read everything before it.
+  const readCol = P.raw(p.side === 'user' ? 'user_read_seq' : 'astrologer_read_seq');
   const mine = p.side === 'user' ? P.sql`user_id = ${p.userId}::uuid` : P.sql`astrologer_id = ${p.astrologerId}::uuid`;
   const rows = await prisma.$queryRaw<{ seq: number; user_id: string; astrologer_id: string }[]>`
     WITH c AS (
-      UPDATE consults SET last_seq = last_seq + 1, ${seen} = ${ts}::timestamp
+      UPDATE consults SET last_seq = last_seq + 1, ${readCol} = last_seq + 1
       WHERE id = ${consultId}::uuid AND status = 'active' AND ${mine}
+        AND NOT EXISTS (SELECT 1 FROM consult_messages WHERE id = ${id}::uuid)
       RETURNING last_seq, user_id, astrologer_id
     )
     INSERT INTO consult_messages (id, consult_id, seq, sender, body, flagged, created_at)
@@ -412,11 +404,63 @@ export async function typing(p: Party, consultId: string): Promise<void> {
   if (c) await publish([otherKey(p, c)], { t: 'typing', consultId, side: p.side });
 }
 
-/** The app is still there (socket connect and heartbeat). Long silence ends the consult in the sweep. */
-export async function touch(p: Party): Promise<void> {
-  const now = clock.now();
-  await prisma.consult.updateMany({
-    where: { ...partyWhere(p), status: 'active' },
-    data: p.side === 'user' ? { userSeenAt: now } : { astrologerSeenAt: now },
+// ---------- History (Chats tab) ----------
+
+/**
+ * Chats tab: every consult, newest first, with the other side, the last message, unread count and
+ * the money (spent for the user, earned for the astrologer). Page with `before` (an ISO time).
+ */
+export async function history(p: Party, before?: Date, limit = 30) {
+  const rows = await prisma.consult.findMany({
+    where: { ...partyWhere(p), ...(before ? { requestedAt: { lt: before } } : {}) },
+    orderBy: { requestedAt: 'desc' },
+    take: limit,
   });
+  const ids = rows.map((r) => r.id);
+  const [last, astrologers, users] = await Promise.all([
+    prisma.consultMessage.findMany({
+      where: { consultId: { in: ids } },
+      orderBy: [{ consultId: 'asc' }, { seq: 'desc' }],
+      distinct: ['consultId'],
+    }),
+    p.side === 'user'
+      ? prisma.astrologer.findMany({
+          where: { id: { in: [...new Set(rows.map((r) => r.astrologerId))] } },
+          select: { id: true, displayName: true, photoUploadId: true },
+        })
+      : [],
+    p.side === 'provider'
+      ? prisma.user.findMany({
+          where: { id: { in: [...new Set(rows.map((r) => r.userId))] } },
+          select: { id: true, name: true },
+        })
+      : [],
+  ]);
+  const photos = await prisma.upload.findMany({
+    where: { id: { in: astrologers.map((a) => a.photoUploadId).filter((x): x is string => !!x) } },
+    select: { id: true, storageKey: true },
+  });
+  const items = await Promise.all(
+    rows.map(async (c) => {
+      const a = astrologers.find((x) => x.id === c.astrologerId);
+      const birthName = (c.birth as { name?: string } | null)?.name ?? null;
+      const m = last.find((x) => x.consultId === c.id);
+      return {
+        id: c.id,
+        mode: c.mode,
+        status: c.status,
+        requestedAt: c.requestedAt,
+        endedAt: c.endedAt,
+        endReason: c.endReason,
+        minutesBilled: c.minutesBilled,
+        amountPaise:
+          p.side === 'user' ? c.chargedPaise : c.chargedPaise - Math.round((c.chargedPaise * c.platformSharePct) / 100),
+        name: p.side === 'user' ? (a?.displayName ?? null) : (users.find((u) => u.id === c.userId)?.name ?? birthName),
+        photoUrl: p.side === 'user' ? await viewLink(photos.find((x) => x.id === a?.photoUploadId)?.storageKey) : null,
+        lastMessage: m ? { body: m.body, sender: m.sender, at: m.createdAt } : null,
+        unread: Math.max(0, c.lastSeq - (p.side === 'user' ? c.userReadSeq : c.astrologerReadSeq)),
+      };
+    }),
+  );
+  return { items, nextBefore: rows.length === limit ? rows[rows.length - 1]?.requestedAt : null };
 }
